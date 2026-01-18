@@ -88,6 +88,7 @@ jobs:
           git fetch -j12 rama
           git checkout -b update-android12-5.10-staging rama/android12-5.10-staging
           # Setup KernelSU-KowSU
+          rm -rf drivers/staging/kernelsu
 
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
@@ -110,7 +111,7 @@ jobs:
         working-directory: gki/common
         run: |
           echo "🚀 [MediaTek] Applying performance tuning via defconfig (HZ=500)."
-          echo "✅ [MediaTek] Tuning will be applied in 'Inject All Kernel Configs' step."
+          echo "✅ [MediaTek] Tuning will be applied in the 'Inject All Kernel Configs' step."
 
       - name: Apply Universal Configuration
         if: github.event.inputs.performance_patch == 'Universal'
@@ -159,24 +160,17 @@ jobs:
           cd ..
           echo "✅ Manager Patch Applied"
           
-          # 4. Apply SusFS (Kernel Side) - FIXED
+          # 4. Apply SusFS (Kernel Side) 
           if [ "$HOOK_METHOD" = "susfs" ]; then
              echo "➡️ Applying SusFS Kernel Patches (Simonpunk)..."
              git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
              rm -rf sus/.git
-             
-             # copy source
-             cp -r sus/kernel_patches/fs .
-             cp -r sus/kernel_patches/include .
-             
-             # APPLY DUA PATCH WAJIB (URUTAN PENTING)
-             cp sus/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch .
-             cp sus/kernel_patches/50_add_susfs_in_gki-android12-5.10.patch .
-             
-             patch -p1 < 10_enable_susfs_for_ksu.patch
+             susfs=sus/kernel_patches
+             cp -r $susfs/fs .
+             cp -r $susfs/include .
+             cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
              patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
-             
-             echo "[✓] SUSFS patched (Symbols registered correctly)"
+             echo "[✓] SUSFS patched"
           fi
           
           echo "✅ MamboSU & Hook Method Setup Complete"
@@ -184,8 +178,16 @@ jobs:
       - name: Apply common fixes
         working-directory: gki/common
         run: |
-          echo "🛠️ Skipping symbol cleanup to preserve SusFS definitions."
-          echo "✅ Cleanup skipped (ksu_init_rc_hook & ksu_handle_vfs_fstat protected)"
+          echo "Applying fixes for Kingfinik98 kernel source..."
+          if [ -f fs/stat.c ]; then
+             # Tidak melakukan pembersihan pada fs/stat.c karena hook pindah ke vfs_fstat
+             echo "✅ fs/stat.c clean (vfs_fstat used)"
+          fi
+          
+          # JANGAN menghapus referensi di fs/read_write.c agar simbol ksu_init_rc_hook tersedia
+          if [ -f fs/read_write.c ]; then
+             echo "✅ fs/read_write.c untouched (keeping SusFS hooks)"
+          fi
 
       - name: Fix Stack Protector
         working-directory: gki/common
