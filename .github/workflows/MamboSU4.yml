@@ -178,16 +178,25 @@ jobs:
       - name: Apply common fixes
         working-directory: gki/common
         run: |
-          echo "Applying fixes for Kingfinik98 kernel source..."
-          if [ -f fs/stat.c ]; then
-             # Tidak melakukan pembersihan pada fs/stat.c karena hook pindah ke vfs_fstat
-             echo "✅ fs/stat.c clean (vfs_fstat used)"
+          echo "🛠️ Memperbaiki error undefined symbol (ksu_init_rc_hook & ksu_handle_vfs_fstat)..."
+          
+          # Perbaiki fs/read_write.c: Hapus panggilan ke ksu_init_rc_hook
+          if [ -f fs/read_write.c ]; then
+             echo "🧹 Membersihkan fs/read_write.c..."
+             # Menghapus baris yang mengandung 'ksu_init_rc_hook'
+             sed -i '/ksu_init_rc_hook/d' fs/read_write.c
+             echo "✅ fs/read_write.c diperbaiki (ksu_init_rc_hook dihapus)"
           fi
           
-          # JANGAN menghapus referensi di fs/read_write.c agar simbol ksu_init_rc_hook tersedia
-          if [ -f fs/read_write.c ]; then
-             echo "✅ fs/read_write.c untouched (keeping SusFS hooks)"
+          # Perbaiki fs/stat.c: Hapus panggilan ke ksu_handle_vfs_fstat
+          if [ -f fs/stat.c ]; then
+             echo "🧹 Membersihkan fs/stat.c..."
+             # Menghapus baris yang mengandung 'ksu_handle_vfs_fstat'
+             sed -i '/ksu_handle_vfs_fstat/d' fs/stat.c
+             echo "✅ fs/stat.c diperbaiki (ksu_handle_vfs_fstat dihapus)"
           fi
+          
+          echo "✅ Perbaikan selesai. Lanjut ke tahap berikutnya."
 
       - name: Fix Stack Protector
         working-directory: gki/common
