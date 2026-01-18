@@ -169,6 +169,16 @@ jobs:
              cp -r $susfs/include .
              cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
              patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
+             
+             # FIX TERBARU: Apply Patch KernelSU agar fungsi ksu_handle_vfs_fstat ada
+             if [ -f $susfs/KernelSU/10_enable_susfs_for_ksu.patch ]; then
+                echo "🩹 Applying SusFS patch for KernelSU (vfs_fstat support)..."
+                cd KernelSU
+                patch -p1 < ../sus/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch
+                cd ..
+                echo "[✓] KSU SusFS patch applied"
+             fi
+             
              echo "[✓] SUSFS patched"
           fi
           
@@ -177,18 +187,19 @@ jobs:
       - name: Apply common fixes
         working-directory: gki/common
         run: |
-          sed -i '/ksu_init_rc_hook/d' fs/stat.c
-          sed -i '/ksu_handle_vfs_fstat/d' fs/stat.c
           echo "Applying fixes for Kingfinik98 kernel source..."
-          echo "🛠️ Fixing undefined KSU symbols (ksu_init_rc_hook, ksu_handle_sys_newfstatat)..."
           if [ -f fs/read_write.c ]; then
-            sed -i '/ksu_init_rc_hook/d' fs/read_write.c
-            echo "✅ Removed ksu_init_rc_hook from fs/read_write.c"
+            sed -i 's/ksu_init_rc_hook.*/0/' fs/read_write.c
+            echo "✅ Disabled ksu_init_rc_hook in fs/read_write.c"
           fi
+          
           if [ -f fs/stat.c ]; then
-            sed -i '/ksu_handle_sys_newfstatat/d' fs/stat.c
-            echo "✅ Removed ksu_handle_sys_newfstatat from fs/stat.c"
+            sed -i 's/ksu_init_rc_hook.*/0/' fs/stat.c
+            sed -i 's/ksu_handle_vfs_fstat.*/0/' fs/stat.c
+            sed -i '/ksu_handle_sys_newfstatat.*/0/' fs/stat.c
+            echo "✅ Safe fixes applied to fs/stat.c (Braces preserved)"
           fi
+
       - name: Fix Stack Protector
         working-directory: gki/common
         run: |
