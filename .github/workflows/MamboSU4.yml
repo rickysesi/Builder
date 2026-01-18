@@ -174,21 +174,13 @@ jobs:
           
           echo "✅ MamboSU & Hook Method Setup Complete"
 
-      - name: Apply common fixes
+            - name: Apply common fixes
         working-directory: gki/common
         run: |
-          sed -i '/ksu_init_rc_hook/d' fs/stat.c
-          sed -i '/ksu_handle_vfs_fstat/d' fs/stat.c
           echo "Applying fixes for Kingfinik98 kernel source..."
-          echo "🛠️ Fixing undefined KSU symbols (ksu_init_rc_hook, ksu_handle_sys_newfstatat)..."
-          if [ -f fs/read_write.c ]; then
-            sed -i '/ksu_init_rc_hook/d' fs/read_write.c
-            echo "✅ Removed ksu_init_rc_hook from fs/read_write.c"
-          fi
-          if [ -f fs/stat.c ]; then
-            sed -i '/ksu_handle_sys_newfstatat/d' fs/stat.c
-            echo "✅ Removed ksu_handle_sys_newfstatat from fs/stat.c"
-          fi
+          # No need to remove SusFS function anymore because it is already patched correctly
+          echo "✅ SusFS hooks are integrated."
+          
       - name: Fix Stack Protector
         working-directory: gki/common
         run: |
