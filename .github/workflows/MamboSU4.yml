@@ -84,11 +84,10 @@ jobs:
       - name: Update kernel source for GKI 5.10
         run: |
           cd gki/common
-          git remote add rama https://github.com/ramabondanp/android_kernel_common-5.10.git
-          git fetch -j12 rama
-          git checkout -b update-android12-5.10-staging rama/android12-5.10-staging
-          # Setup KernelSU-KowSU
-          rm -rf drivers/staging/kernelsu
+          git remote add kingfinik98 https://github.com/Kingfinik98/kernel-android12-5.10.git
+          git fetch -j12 kingfinik98
+          git checkout -b update-master kingfinik98/master
+          # Setup KernelSU
 
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
@@ -306,8 +305,6 @@ jobs:
           CONFIG_MQ_IOSCHED_BFQ=y
           CONFIG_IOSCHED_BFQ=y
           CONFIG_BFQ_GROUP_IOSCHED=y
-          CONFIG_ZRAM=y
-          CONFIG_ZRAM_WRITEBACK=y
           EOF
 
       - name: Set version
@@ -359,8 +356,8 @@ jobs:
           mkdir -p prebuilts-master/clang/host/linux-x86/$CLANG_VER
           cd prebuilts-master/clang/host/linux-x86
           curl -L "${CLANG_URL}" | tar -xz -C $CLANG_VER
-          rm -rf clang-r563880b
-          ln -sf $CLANG_VER clang-r563880b
+          rm -rf clang-r416183b
+          ln -sf $CLANG_VER clang-r416183b
 
       - name: Commit changes
         working-directory: gki/common
