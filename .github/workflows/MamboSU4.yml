@@ -88,7 +88,6 @@ jobs:
           git fetch -j12 rama
           git checkout -b update-android12-5.10-staging rama/android12-5.10-staging
           # Setup KernelSU-KowSU
-          rm -rf drivers/staging/kernelsu
 
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
@@ -111,7 +110,7 @@ jobs:
         working-directory: gki/common
         run: |
           echo "🚀 [MediaTek] Applying performance tuning via defconfig (HZ=500)."
-          echo "✅ [MediaTek] Tuning will be applied in the 'Inject All Kernel Configs' step."
+          echo "✅ [MediaTek] Tuning will be applied in 'Inject All Kernel Configs' step."
 
       - name: Apply Universal Configuration
         if: github.event.inputs.performance_patch == 'Universal'
@@ -160,17 +159,24 @@ jobs:
           cd ..
           echo "✅ Manager Patch Applied"
           
-          # 4. Apply SusFS (Kernel Side) 
+          # 4. Apply SusFS (Kernel Side) - FIXED
           if [ "$HOOK_METHOD" = "susfs" ]; then
              echo "➡️ Applying SusFS Kernel Patches (Simonpunk)..."
              git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
              rm -rf sus/.git
-             susfs=sus/kernel_patches
-             cp -r $susfs/fs .
-             cp -r $susfs/include .
-             cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
+             
+             # copy source
+             cp -r sus/kernel_patches/fs .
+             cp -r sus/kernel_patches/include .
+             
+             # APPLY DUA PATCH WAJIB (URUTAN PENTING)
+             cp sus/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch .
+             cp sus/kernel_patches/50_add_susfs_in_gki-android12-5.10.patch .
+             
+             patch -p1 < 10_enable_susfs_for_ksu.patch
              patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
-             echo "[✓] SUSFS patched (Using vfs_fstat hook as per latest Simonpunk fix)"
+             
+             echo "[✓] SUSFS patched (Symbols registered correctly)"
           fi
           
           echo "✅ MamboSU & Hook Method Setup Complete"
@@ -178,22 +184,8 @@ jobs:
       - name: Apply common fixes
         working-directory: gki/common
         run: |
-          echo "Applying fixes for Kingfinik98 kernel source..."
-          echo "🛠️ Cleaning up undefined KSU symbols..."
-          
-          # Clean up ksu_init_rc_hook from read_write.c if present (avoid duplicate/old definitions)
-          if [ -f fs/read_write.c ]; then
-            sed -i '/ksu_init_rc_hook/d' fs/read_write.c
-            echo "✅ Removed ksu_init_rc_hook from fs/read_write.c"
-          fi
-
-          # PERBAIKAN: Menghapus pembersihan ksu_handle_sys_newfstatat karena Simonpunk
-          # sudah menggantinya dengan ksu_handle_vfs_fstat pada patch terbaru.
-          # Patch baru tidak lagi menyentuh newfstatat, jadi tidak perlu dibersihkan.
-          if [ -f fs/stat.c ]; then
-            # sed -i '/ksu_handle_sys_newfstatat/d' fs/stat.c  <--- BARIS INI DIHAPUS
-            echo "✅ fs/stat.c clean (vfs_fstat used instead of newfstatat)"
-          fi
+          echo "🛠️ Skipping symbol cleanup to preserve SusFS definitions."
+          echo "✅ Cleanup skipped (ksu_init_rc_hook & ksu_handle_vfs_fstat protected)"
 
       - name: Fix Stack Protector
         working-directory: gki/common
