@@ -84,11 +84,12 @@ jobs:
       - name: Update kernel source for GKI 5.10
         run: |
           cd gki/common
-          git remote add kingfinik98 https://github.com/Kingfinik98/kernel-android12-5.10.git
-          git fetch -j12 kingfinik98
-          git checkout -b update-master kingfinik98/master
+          git remote add rama https://github.com/ramabondanp/android_kernel_common-5.10.git
+          git fetch -j12 rama
+          git checkout -b update-android12-5.10-staging rama/android12-5.10-staging
           # Setup KernelSU-KowSU
-          
+          rm -rf drivers/staging/kernelsu
+
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
         working-directory: gki/common
@@ -165,29 +166,11 @@ jobs:
              git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
              rm -rf sus/.git
              susfs=sus/kernel_patches
-             
-             # URUTAN PATCH SANGAT PENTING:
-             
-             # 4a. Apply KernelSU patch DULU.
-             # Patch ini mengubah nama fungsi di kernel/ksud.c menjadi ksu_handle_vfs_fstat
-             # dan menambahkan badan fungsinya.
-             if [ -f $susfs/KernelSU/10_enable_susfs_for_ksu.patch ]; then
-                echo "🩹 Applying SusFS patch for KernelSU (vfs_fstat support)..."
-                cd KernelSU
-                patch -p1 < ../$susfs/KernelSU/10_enable_susfs_for_ksu.patch
-                cd ..
-                echo "[✓] KSU SusFS patch applied"
-             fi
-
-             # 4b. Apply FS patch KEDUA.
-             # Patch ini menambahkan 'extern' declaration dan pemanggilan ke fungsi tersebut di fs/stat.c.
-             # Karena definisi sudah ada di langkah 4a, patch ini akan terap dengan sempurna tanpa error.
              cp -r $susfs/fs .
              cp -r $susfs/include .
              cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
              patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
-             
-             echo "[✓] SUSFS patched"
+             echo "[✓] SUSFS patched (Using vfs_fstat hook as per latest Simonpunk fix)"
           fi
           
           echo "✅ MamboSU & Hook Method Setup Complete"
@@ -196,10 +179,21 @@ jobs:
         working-directory: gki/common
         run: |
           echo "Applying fixes for Kingfinik98 kernel source..."
-          # PERHATIAN: TIDAK ADA sed untuk ksu_init_rc_hook, vfs_fstat, atau newfstatat.
-          # Kode tersebut sudah ditangani 100% oleh patch SusFS yang lengkap di langkah sebelumnya.
-          # JANGAN MENGGUNAKAN SED DI SINI AGAR TIDAK RUSAK STRUKTUR BRACES.
-          echo "✅ SusFS code handled by patches. No sed fixes needed."
+          echo "🛠️ Cleaning up undefined KSU symbols..."
+          
+          # Clean up ksu_init_rc_hook from read_write.c if present (avoid duplicate/old definitions)
+          if [ -f fs/read_write.c ]; then
+            sed -i '/ksu_init_rc_hook/d' fs/read_write.c
+            echo "✅ Removed ksu_init_rc_hook from fs/read_write.c"
+          fi
+
+          # PERBAIKAN: Menghapus pembersihan ksu_handle_sys_newfstatat karena Simonpunk
+          # sudah menggantinya dengan ksu_handle_vfs_fstat pada patch terbaru.
+          # Patch baru tidak lagi menyentuh newfstatat, jadi tidak perlu dibersihkan.
+          if [ -f fs/stat.c ]; then
+            # sed -i '/ksu_handle_sys_newfstatat/d' fs/stat.c  <--- BARIS INI DIHAPUS
+            echo "✅ fs/stat.c clean (vfs_fstat used instead of newfstatat)"
+          fi
 
       - name: Fix Stack Protector
         working-directory: gki/common
@@ -211,7 +205,7 @@ jobs:
 
       - name: Patch module & DRM (Xiaomi Compat)
         working-directory: gki/common
-        run: | 
+        run: |
           echo "🩹 Menerapkan patch kompatibilitas untuk perangkat Xiaomi"
           sed -i '/pr_warn.*disagrees about version of symbol.*/,+1 s/.*/return 1;/' kernel/module.c
           sed -i '/^static int drm_atomic_check_valid_clones/,/^}/d' drivers/gpu/drm/drm_atomic_helper.c
