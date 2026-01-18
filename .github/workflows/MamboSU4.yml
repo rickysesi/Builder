@@ -230,7 +230,7 @@ jobs:
           # ===============================================
           # Konfigurasi KSU NEXT (Base)
           CONFIG_KSU=y
-          CONFIG_KPM=y
+          CONFIG_KPM=n
           CONFIG_KSU_SUSFS_SUS_SU=n
           CONFIG_KSU_SYSCALL_HOOK=n
           CONFIG_KPROBES=y
@@ -252,7 +252,7 @@ jobs:
           CONFIG_KSU_SUSFS_TRY_UMOUNT=n
           CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=n
           CONFIG_KSU_SUSFS_SPOOF_UNAME=y
-          CONFIG_KSU_SUSFS_ENABLE_LOG=y
+          CONFIG_KSU_SUSFS_ENABLE_LOG=n
           CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
           CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
           CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
@@ -270,7 +270,7 @@ jobs:
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
             cat >> $DEFCONFIG <<EOF
           # --- MediaTek Performance Tuning ---
-          CONFIG_HZ=500
+          CONFIG_HZ=300
           EOF
             echo "✅ [MediaTek] Applied HZ=500 config."
           elif [ "$PERFORMANCE_PATCH" = "Universal" ]; then
