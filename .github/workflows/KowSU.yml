@@ -79,10 +79,10 @@ jobs:
       - name: Setup Upstream & KernelSU-Next
         working-directory: gki/common
         run: |
-          # Upstream to 5.10.246 logic
-          git remote add rama https://github.com/ramabondanp/android_kernel_common-5.10.git
-          git fetch -j12 rama
-          git checkout -b update-5.10.247 rama/android12-5.10-staging
+          # Upstream kingfinix98 mglru
+          git remote add kingfinik98 https://github.com/Kingfinik98/kernel-android12-5.10.git
+          git fetch -j12 kingfinik98
+          git checkout -b update-mglru kingfinik98/mglru
           
           # Setup KernelSU-Next
           rm -rf drivers/staging/kernelsu
