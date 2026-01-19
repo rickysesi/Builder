@@ -111,9 +111,10 @@ jobs:
           cat <<EOF >> "$DEFCONFIG"
           # KernelSU Configuration
           CONFIG_KSU=y
-          CONFIG_KPM=n
-          CONFIG_KSU_MANUAL_HOOK=y
-          CONFIG_KSU_KPROBES_HOOK=n
+          CONFIG_KPM=y
+          CONFIG_KSU_SYSCALL_HOOK=y
+          CONFIG_KPROBES=y
+          CONFIG_KPROBE_EVENTS=y
           
           # SUSFS Configuration
           CONFIG_KSU_SUSFS=y
