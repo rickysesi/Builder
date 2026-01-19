@@ -1,4 +1,4 @@
-name: BoltX KowSU MamboSU
+name: BoltX KowSU Fixed
 
 on:
   workflow_dispatch:
