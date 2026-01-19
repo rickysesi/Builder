@@ -118,7 +118,7 @@ jobs:
       - name: Setup KernelSU-Next & Hook Method
         working-directory: gki/common
         run: |
-          echo "🧩 Setup KernelSU-Next dan Hook Method"
+          echo "🧩 Setup KernelSU Hook Method"
           for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
             if [ -d $KSU_PATH ]; then
               echo "KernelSU driver found in $KSU_PATH, Removing..."
