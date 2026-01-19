@@ -163,19 +163,6 @@ jobs:
         run: |
           echo "Applying fixes for Kingfinik98 kernel source..."
           
-          # --- PERBAIKAN ERROR BUILDFIX (KSU Undefined Symbols) ---
-          # Menghapus referensi fungsi yang hilang (undefined symbol) 
-          # agar sesuai dengan Wild KSU v2 / SUSFS patch yang digunakan
-          echo "🛠️ Fixing undefined KSU symbols (ksu_init_rc_hook, ksu_handle_sys_newfstatat)..."
-          if [ -f fs/read_write.c ]; then
-            sed -i '/ksu_init_rc_hook/d' fs/read_write.c
-            echo "✅ Removed ksu_init_rc_hook from fs/read_write.c"
-          fi
-          if [ -f fs/stat.c ]; then
-            sed -i '/ksu_handle_sys_newfstatat/d' fs/stat.c
-            echo "✅ Removed ksu_handle_sys_newfstatat from fs/stat.c"
-          fi
-
       - name: Fix Stack Protector
         working-directory: gki/common
         run: |
