@@ -1,4 +1,4 @@
-name: BoltX KernelSU 
+name: BoltX KowSU
 
 on:
   workflow_dispatch:
