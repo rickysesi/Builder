@@ -128,7 +128,7 @@ jobs:
             fi
           done
           echo "✅ Existing KernelSU drivers removed"
-          echo "➡️ Menambahkan KernelSU-Next"
+          echo "➡️ Menambahkan KernelSU"
           curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh" | bash -s master
           echo "✅ KernelSU added"
           
