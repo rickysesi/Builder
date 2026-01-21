@@ -130,7 +130,7 @@ jobs:
           done
           echo "✅ Existing KernelSU drivers removed"
           echo "➡️ Menambahkan KernelSU-Next"
-          curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh" | bash -s staging
+          curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh" | bash -s master
           echo "✅ KernelSU added"
           sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
           echo "✅ Kbuild patched."
