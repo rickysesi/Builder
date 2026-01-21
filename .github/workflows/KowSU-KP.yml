@@ -1,4 +1,4 @@
-name: BoltX KernelSU 
+name: BoltX KowSU-KP
 
 on:
   workflow_dispatch:
@@ -129,7 +129,7 @@ jobs:
           done
           echo "✅ Existing KernelSU drivers removed"
           echo "➡️ Menambahkan KernelSU"
-          curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh" | bash -s master
+          curl -LSs "https://raw.githubusercontent.com/KOWX712/KernelSU/refs/heads/staging/kernel/setup.sh" | bash -s staging
           echo "✅ KernelSU added"
           
           # --- FIX: Cek file Kbuild sebelum menjalankan sed untuk menghindari error ---
