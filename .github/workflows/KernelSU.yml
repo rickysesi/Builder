@@ -27,9 +27,8 @@ on:
         description: 'Select Hook Method'
         required: true
         type: choice
-        default: 'susfs'
+        default: 'kprobes'
         options:
-          - 'susfs'
           - 'kprobes'
       performance_patch:
         description: 'Select Device SoC for Performance Tuning (Internal)'
@@ -118,7 +117,7 @@ jobs:
       - name: Setup KernelSU-Next & Hook Method
         working-directory: gki/common
         run: |
-          echo "🧩 Setup KernelSU dan Hook Method"
+          echo "🧩 Setup KernelSU dan Hook Method (Kprobes Only)"
           for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
             if [ -d $KSU_PATH ]; then
               echo "KernelSU driver found in $KSU_PATH, Removing..."
@@ -130,7 +129,7 @@ jobs:
           done
           echo "✅ Existing KernelSU drivers removed"
           echo "➡️ Menambahkan KernelSU-Next"
-          curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh" | bash -s staging
+          curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh" | bash -s master
           echo "✅ KernelSU added"
           
           # --- FIX: Cek file Kbuild sebelum menjalankan sed untuk menghindari error ---
@@ -138,27 +137,11 @@ jobs:
             sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
             echo "✅ Kbuild patched."
           else
-            echo "⚠️ File Kbuild tidak ditemukan, melewati patching (mungkin tidak diperlukan versi ini)."
+            echo "⚠️ File Kbuild tidak ditemukan, melewati patching."
           fi
           # -------------------------------------------------------------------------
-
-          HOOK_METHOD="${{ github.event.inputs.hook_method }}"
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-            echo "➡️ Cloning susfs4ksu (versi baru)"
-            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android12-5.10 sus
-            echo "✅ SUSFS berhasil diclone"
-            echo "🩹 Patching susfs4ksu"
-            susfs=sus/kernel_patches
-            cp -r $susfs/fs .
-            cp -r $susfs/include .
-            cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
-            patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
-            sed -i '1i#include <linux/stat.h>' include/linux/susfs.h
-            echo "✅ SUSFS patched"
-          else
-            echo "➡️ Menggunakan metode Kprobes Hook"
-            echo "✅ Kprobes setup selesai"
-          fi
+          echo "➡️ Menggunakan metode Kprobes Hook (Standar)"
+          echo "✅ Kprobes setup selesai"
 
       - name: Apply common fixes
         working-directory: gki/common
@@ -192,49 +175,20 @@ jobs:
         run: |
           echo "⚙️ Menambahkan konfigurasi kernel"
           DEFCONFIG="arch/arm64/configs/gki_defconfig"
-          HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
           cat >> $DEFCONFIG <<EOF
           # ===============================================
-          # Konfigurasi KSU NEXT (Base)
+          # Konfigurasi KSU NEXT (Base Kprobes)
           CONFIG_KSU=y
           CONFIG_KPM=y
-          CONFIG_KSU_SUSFS_SUS_SU=y
+          CONFIG_KSU_SUSFS=n
           CONFIG_KSU_SYSCALL_HOOK=y
           CONFIG_KPROBES=y
           CONFIG_KPROBE_EVENTS=y
-          EOF
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-            cat >> $DEFCONFIG <<EOF
-          # --- SUSFS Method (includes Kprobes/Hybrid) ---
-          CONFIG_KSU_SUSFS=y
-          CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_PATH=y
-          CONFIG_KSU_SUSFS_SUS_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n
-          CONFIG_KSU_SUSFS_TRY_UMOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
-          CONFIG_KSU_SUSFS_SPOOF_UNAME=y
-          CONFIG_KSU_SUSFS_ENABLE_LOG=y
-          CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
-          CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
-          CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
           CONFIG_KSU_MANUAL_HOOK=n
           CONFIG_KSU_HAS_MANUAL_HOOK=n
           EOF
-          else
-            cat >> $DEFCONFIG <<EOF
-          # --- Kprobes Hook Method ---
-          CONFIG_KSU_SUSFS=n
-          CONFIG_KSU_MANUAL_HOOK=n
-          CONFIG_KSU_HAS_MANUAL_HOOK=n
-          EOF
-          fi
+          
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
             cat >> $DEFCONFIG <<EOF
           # --- MediaTek Performance Tuning ---
@@ -275,19 +229,16 @@ jobs:
           echo "" > scripts/setlocalversion
           chmod +x scripts/setlocalversion
           KERNEL_NAME_INPUT="${{ github.event.inputs.kernel_name }}"
-          HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
 
-          # --- PERUBAHAN UTAMA: MEMBANGUN VERSI SESUAI CONTOH ---
+          # --- PERUBAHAN UTAMA: MEMBANGUN VERSI ---
           SUFFIX=""
           if [ -n "$KERNEL_NAME_INPUT" ]; then
             SUFFIX="-$KERNEL_NAME_INPUT"
           fi
 
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-            SUFFIX="$SUFFIX-ඞ-SuS"
-          fi
-
+          # Hapus logika SuSFS suffix
+          
           if [ "$PERFORMANCE_PATCH" = "Snapdragon" ]; then
             SUFFIX="$SUFFIX-Qcom"
           else
@@ -348,16 +299,11 @@ jobs:
             KERNEL_NAME="$CUSTOM_KERNEL_NAME"
           fi
 
-          HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           STATUS="${{ github.event.inputs.release_status }}"
           CLANG_VERSION_STRING="${{ github.event.inputs.clang_version }}"
 
-          # Tentukan nama Varian untuk nama file zip
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-            VARIANT="SusFS"
-          else
-            VARIANT="Kprobes"
-          fi
+          # Hardcoded Variant ke Kprobes
+          VARIANT="Kprobes"
 
           BUILD_DATE=$(date +"%Y%m%d")
           KBUILD_BUILD_TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
@@ -373,7 +319,6 @@ jobs:
           echo "AK3_ZIP_NAME=$AK3_ZIP_NAME" >> $GITHUB_ENV
           echo "KBUILD_BUILD_TIMESTAMP=$KBUILD_BUILD_TIMESTAMP" >> $GITHUB_ENV
           echo "KSU=KernelSU-Next" >> $GITHUB_ENV
-          echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/raw/gki-android12-5.10/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g')" >> $GITHUB_ENV
           echo "COMPILER_STRING=$CLANG_VERSION_STRING" >> $GITHUB_ENV
 
       - name: Package Kernel (AnyKernel3)
@@ -407,9 +352,8 @@ jobs:
           RELEASE_NOTES="🐧 *Linux Version*: ${{ env.LINUX_VERSION }}
           📅 *Build Date*: ${{ env.KBUILD_BUILD_TIMESTAMP }}
           📛 *KernelSU*: ${{ env.KSU }}
-          ඞ *SuSFS*: ${{ env.SUSFS_VERSION }}
           🔰 *Compiler*: ${{ env.COMPILER_STRING }}
-          🔗 *Hook Method*: ${{ env.HOOK_METHOD }}"
+          🔗 *Hook Method*: Kprobes"
           gh release create "$RELEASE_TAG" "${{ env.AK3_ZIP_NAME }}" \
             --title "$RELEASE_TAG" \
             --notes "$RELEASE_NOTES" \
