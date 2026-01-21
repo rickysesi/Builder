@@ -130,7 +130,7 @@ jobs:
           done
           echo "✅ Existing KernelSU drivers removed"
           echo "➡️ Menambahkan KernelSU-Next"
-          curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh" | bash -s master
+          curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh" | bash -s staging
           echo "✅ KernelSU added"
           
           # --- FIX: Cek file Kbuild sebelum menjalankan sed untuk menghindari error ---
