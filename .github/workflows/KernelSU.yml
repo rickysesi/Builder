@@ -132,8 +132,16 @@ jobs:
           echo "➡️ Menambahkan KernelSU-Next"
           curl -LSs "https://raw.githubusercontent.com/backslashxx/KernelSU/refs/heads/master/kernel/setup.sh" | bash -s master
           echo "✅ KernelSU added"
-          sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
-          echo "✅ Kbuild patched."
+          
+          # --- FIX: Cek file Kbuild sebelum menjalankan sed untuk menghindari error ---
+          if [ -f "drivers/kernelsu/Kbuild" ]; then
+            sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
+            echo "✅ Kbuild patched."
+          else
+            echo "⚠️ File Kbuild tidak ditemukan, melewati patching (mungkin tidak diperlukan versi ini)."
+          fi
+          # -------------------------------------------------------------------------
+
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           if [ "$HOOK_METHOD" = "susfs" ]; then
             echo "➡️ Cloning susfs4ksu (versi baru)"
