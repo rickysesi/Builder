@@ -23,7 +23,6 @@ on:
         options:
           - 'r536225 (Clang 19)'
           - 'r547379 (Clang 20)'
-      # HOOK_METHOD DIHAPUS TOTAL
       performance_patch:
         description: 'Select Device SoC for Performance Tuning (Internal)'
         required: true
@@ -114,7 +113,7 @@ jobs:
         run: |
           sed -i '2d' gki/common/build.config.gki
 
-      - name: Setup MamboSU (Standard Mode)
+      - name: Setup MamboSU (Standard Kprobes Mode)
         working-directory: gki/common
         run: |
           echo "🧩 Setup MamboSU (Rissu)"
@@ -131,8 +130,8 @@ jobs:
           done
           echo "✅ Existing MamboSU drivers removed"
           
-          # 2. Setup KernelSU method (Main Branch)
-          echo "➡️ Using rsuntk/KernelSU setup -> branch main"
+          # 2. Setup KernelSU (Main Branch -> Standard Kprobes)
+          echo "➡️ Using rsuntk/KernelSU setup -> branch main (Standard Kprobes)"
           curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
           
           # 3. Apply Manager Support Patch
@@ -143,7 +142,7 @@ jobs:
           cd ..
           echo "✅ Manager Patch Applied"
           
-          # 4. CLEAN MODE (TIDAK ADA SUSFS)
+          # 4. NO SUSFS PATCHES
           echo "⏭️ Skipping SusFS patches (Clean Build)."
           
           echo "✅ MamboSU & Hook Method Setup Complete"
@@ -175,70 +174,58 @@ jobs:
           echo "🧹 [Clean-Up] Deleting check_defconfig"
           sed -i 's/check_defconfig//' gki/common/build.config.gki
 
-      - name: Inject All Kernel Configs
+      - name: Inject All Kernel Configs (ECHO METHOD)
         working-directory: gki/common
         run: |
-          echo "⚙️ Menambahkan konfigurasi kernel (Kprobes Mode)"
+          echo "⚙️ Menambahkan konfigurasi kernel (Robust Echo Method)"
           DEFCONFIG="arch/arm64/configs/gki_defconfig"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
           
-          # === KONFIGURASI STABIL (KHUSUS LAMA) ===
-          cat >> $DEFCONFIG <<EOF
-          # === KernelSU core ===
-          CONFIG_KSU=y
-          CONFIG_KPM=y
+          # === KernelSU Core ===
+          echo "CONFIG_KSU=y" >> $DEFCONFIG
+          echo "CONFIG_KPM=y" >> $DEFCONFIG
           
           # === Kprobes Hook (Stabil) ===
-          CONFIG_KSU_SUSFS=n
-          CONFIG_KSU_MANUAL_HOOK=n
-          CONFIG_KSU_HAS_MANUAL_HOOK=n
-          CONFIG_KPROBES=y
-          CONFIG_KPROBE_EVENTS=y
-          EOF
+          echo "CONFIG_KSU_SUSFS=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_MANUAL_HOOK=y" >> $DEFCONFIG
+          echo "CONFIG_KSU_HAS_MANUAL_HOOK=n" >> $DEFCONFIG
+          echo "CONFIG_KPROBES=y" >> $DEFCONFIG
+          echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG
           
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
-            cat >> $DEFCONFIG <<EOF
-            # --- MediaTek Performance Tuning ---
-            CONFIG_HZ=500
-            EOF
+            echo "CONFIG_HZ=500" >> $DEFCONFIG
+            echo "CONFIG_HZ=500" >> $DEFCONFIG
             echo "✅ [MediaTek] Applied HZ=500 config."
           elif [ "$PERFORMANCE_PATCH" = "Universal" ]; then
-            cat >> $DEFCONFIG <<EOF
-            # --- Universal Configuration ---
-            CONFIG_HZ_300=y
-            CONFIG_CPU_FREQ=y
-            CONFIG_HIGH_RES_TIMERS=y
-            EOF
+            echo "CONFIG_HZ_300=y" >> $DEFCONFIG
+            echo "CONFIG_CPU_FREQ=y" >> $DEFCONFIG
+            echo "CONFIG_HIGH_RES_TIMERS=y" >> $DEFCONFIG
+            echo "CONFIG_HZ_300=y" >> $DEFCONFIG
+            echo "CONFIG_HIGH_RES_TIMERS=y" >> $DEFCONFIG
             echo "✅ [Universal] Applied universal configuration."
           fi
           
           # Additional Optimasi
-          cat >> $DEFCONFIG <<EOF
-          # Add additional tmpfs config setting
-          CONFIG_TMPFS_XATTR=y
-          CONFIG_TMPFS_POSIX_ACL=y
-          # Add additional config setting
-          CONFIG_IP_NF_TARGET_TTL=y
-          CONFIG_IP6_NF_TARGET_HL=y
-          CONFIG_IP6_NF_MATCH_HL=y
-          # Add BBR Config
-          CONFIG_TCP_CONG_ADVANCED=y
-          CONFIG_TCP_CONG_BBR=y
-          CONFIG_NET_SCH_FQ=y
-          CONFIG_TCP_CONG_BIC=n
-          CONFIG_TCP_CONG_WESTWOOD=n
-          CONFIG_TCP_CONG_HTCP=n
-          CONFIG_DEFAULT_BBR=y
-          # Optimasi tambahan (Smooth & Responsiveness)
-          CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
-          CONFIG_SCHED_TUNE=y
-          CONFIG_MQ_IOSCHED_KYBER=y
-          CONFIG_MQ_IOSCHED_BFQ=y
-          CONFIG_IOSCHED_BFQ=y
-          CONFIG_BFQ_GROUP_IOSCHED=y
-          CONFIG_ZRAM=y
-          CONFIG_ZRAM_WRITEBACK=y
-          EOF
+          echo "CONFIG_TMPFS_XATTR=y" >> $DEFCONFIG
+          echo "CONFIG_TMPFS_POSIX_ACL=y" >> $DEFCONFIG
+          echo "CONFIG_IP_NF_TARGET_TTL=y" >> $DEFCONFIG
+          echo "CONFIG_IP6_NF_TARGET_HL=y" >> $DEFCONFIG
+          echo "CONFIG_IP6_NF_MATCH_HL=y" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_ADVANCED=y" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_BBR=y" >> $DEFCONFIG
+          echo "CONFIG_NET_SCH_FQ=y" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_BIC=n" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_WESTWOOD=n" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_HTCP=n" >> $DEFCONFIG
+          echo "CONFIG_DEFAULT_BBR=y" >> $DEFCONFIG
+          echo "CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y" >> $DEFCONFIG
+          echo "CONFIG_SCHED_TUNE=y" >> $DEFCONFIG
+          echo "CONFIG_MQ_IOSCHED_KYBER=y" >> $DEFCONFIG
+          echo "CONFIG_MQ_IOSCHED_BFQ=y" >> $DEFCONFIG
+          echo "CONFIG_IOSCHED_BFQ=y" >> $DEFCONFIG
+          echo "CONFIG_BFQ_GROUP_IOSCHED=y" >> $DEFCONFIG
+          echo "CONFIG_ZRAM=y" >> $DEFCONFIG
+          echo "CONFIG_ZRAM_WRITEBACK=y" >> $DEFCONFIG
 
       - name: Set version
         working-directory: gki/common
@@ -253,7 +240,6 @@ jobs:
             SUFFIX="-$KERNEL_NAME_INPUT"
           fi
 
-          # Hapus suffix SusFS (Hanya berdasarkan Performa)
           if [ "$PERFORMANCE_PATCH" = "Snapdragon" ]; then
             SUFFIX="$SUFFIX-Qcom"
           elif [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
@@ -317,17 +303,13 @@ jobs:
           STATUS="${{ github.event.inputs.release_status }}"
           CLANG_VERSION_STRING="${{ github.event.inputs.clang_version }}"
 
-          # Variant hanya berdasarkan Performa (Karena SusFS sudah hapus)
-          VARIANT="Standard"
-          
           BUILD_DATE=$(date +"%Y%m%d")
           KBUILD_BUILD_TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           RELEASE="v${BUILD_DATE}"
           
-          AK3_ZIP_NAME="AK3-${KERNEL_NAME}-${RELEASE}-${BASE_LINUX_VERSION}-${VARIANT}.zip"
+          AK3_ZIP_NAME="AK3-${KERNEL_NAME}-${RELEASE}-${BASE_LINUX_VERSION}-Standard.zip"
           
           echo "KERNEL_NAME=$KERNEL_NAME" >> $GITHUB_ENV
-          echo "VARIANT=$VARIANT" >> $GITHUB_ENV
           echo "STATUS=$STATUS" >> $GITHUB_ENV
           echo "RELEASE=$RELEASE" >> $GITHUB_ENV
           echo "AK3_ZIP_NAME=$AK3_ZIP_NAME" >> $GITHUB_ENV
