@@ -430,11 +430,16 @@ jobs:
       - name: Fix SUSFS Uname Symbol Error
         working-directory: gki/common
         run: |
-          echo "🛠️ Applying fix for undefined SUSFS symbols..."
-          # Disable the SUSFS Uname handling block in supercalls.c to use standard kernel spoofing
-          # This fixes the linker error caused by missing functions in the current SUSFS patch
-          sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c
-          echo "✅ SUSFS symbol fix applied."
+          # Khusus KernelSU-Next karena struktur supercalls.c berbeda dan patch SUSFS yang dipakai tidak memiliki symbol yang diminta
+          if [ "${{ matrix.variant }}" == "KernelSU-Next" ]; then
+            echo "🛠️ Applying fix for undefined SUSFS symbols (KernelSU-Next)..."
+            # Disable SUSFS Uname handling block in supercalls.c to use standard kernel spoofing
+            # This fixes the linker error caused by missing functions in the current SUSFS patch
+            sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c
+            echo "✅ SUSFS symbol fix applied for KernelSU-Next."
+          else
+            echo "⏭️ Skipping SUSFS fix (Not needed for ${{ matrix.variant }})"
+          fi
 
       - name: Set version
         working-directory: gki/common
