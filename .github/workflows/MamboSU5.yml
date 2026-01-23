@@ -187,28 +187,11 @@ jobs:
           
           echo "✅ MamboSU & Hook Method Setup Complete"
 
+      # --- STEP APPLY COMMON FIXES DIHAPUS SESUAI INSTRUKSI ---
       - name: Apply common fixes
         working-directory: gki/common
         run: |
-          echo "🛠️ Memperbaiki error undefined symbol (ksu_init_rc_hook & ksu_handle_vfs_fstat)..."
-          
-          # Perbaiki fs/read_write.c: Hapus panggilan ke ksu_init_rc_hook
-          if [ -f fs/read_write.c ]; then
-             echo "🧹 Membersihkan fs/read_write.c..."
-             # Menghapus baris yang mengandung 'ksu_init_rc_hook'
-             sed -i '/ksu_init_rc_hook/d' fs/read_write.c
-             echo "✅ fs/read_write.c diperbaiki (ksu_init_rc_hook dihapus)"
-          fi
-          
-          # Perbaiki fs/stat.c: Hapus panggilan ke ksu_handle_vfs_fstat
-          if [ -f fs/stat.c ]; then
-             echo "🧹 Membersihkan fs/stat.c..."
-             # Menghapus baris yang mengandung 'ksu_handle_vfs_fstat'
-             sed -i '/ksu_handle_vfs_fstat/d' fs/stat.c
-             echo "✅ fs/stat.c diperbaiki (ksu_handle_vfs_fstat dihapus)"
-          fi
-          
-          echo "✅ Perbaikan selesai. Lanjut ke tahap berikutnya."
+          echo "⏭️ Skipping common fixes (not needed for current SusFS setup)"
 
       - name: Fix Stack Protector
         working-directory: gki/common
