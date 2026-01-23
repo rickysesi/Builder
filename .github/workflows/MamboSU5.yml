@@ -131,8 +131,8 @@ jobs:
           echo "✅ Existing MamboSU drivers removed"
           
           # 2. Setup KernelSU (Main Branch -> Standard Kprobes)
-          echo "➡️ Using rsuntk/KernelSU setup -> branch main (Standard Kprobes)"
-          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
+          echo "➡️ Using rsuntk/KernelSU setup (Standard Kprobes)"
+          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-rksu-master
           
           # 3. Apply Manager Support Patch
           echo "🛠️ Applying MamboSU Manager Support Patch..."
