@@ -138,35 +138,12 @@ jobs:
           done
           echo "✅ Existing MamboSU drivers removed"
           
-          # 2. PRE-SETUP FIX: Force Disable Kprobes at Source Level
-          echo "🛡️ [PRE-SETUP] Disabling Kprobes at source level to prevent Auto-detection..."
-          sed -i 's/CONFIG_KPROBES=y/CONFIG_KPROBES=n/g' arch/arm64/configs/gki_defconfig
-          sed -i 's/CONFIG_KPROBE_EVENTS=y/CONFIG_KPROBE_EVENTS=n/g' arch/arm64/configs/gki_defconfig
-          export KSU_FORCE_DISABLE_KPROBES=1
-          echo "✅ [PRE-SETUP] Kprobes disabled at source."
+          # 2. Setup KernelSU method
+          # Updated to susfs-rksu-master as requested to fix ABI symbol issues
+          echo "➡️ Using rsuntk/KernelSU setup -> branch susfs-rksu-master"
+          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-rksu-master
           
-          # 3. Setup KernelSU method
-          echo "➡️ Using rsuntk/KernelSU setup -> branch main"
-          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
-          
-          # 4. POST-SETUP FIX: FORCE OVERRIDE MAKEFILE (FIX KUNCI UNDEFINED SYMBOL)
-          # Alasan: setup.sh otomatis mengaktifkan CONFIG_KSU_MANUAL_HOOK=y di KernelSU/kernel/Makefile.
-          # Jika dibiarkan, KernelSU akan memanggil register_kprobe.
-          # Tapi karena CONFIG_KPROBES=n, maka fungsi register_kprobe tidak ada di vmlinux.
-          # HASIL: ERROR "undefined symbol: register_kprobe".
-          # SOLUSI: Hapus definisi Makefile setup.sh, paksa tulis yang n.
-          echo "🛡️ [CRITICAL FIX] Fixing KernelSU Makefile to prevent undefined symbol error..."
-          if [ -f "KernelSU/kernel/Makefile" ]; then
-             # Hapus definisi Manual Hook dan SySCALL Hook yang ditanam setup.sh
-             sed -i '/^CONFIG_KSU_MANUAL_HOOK=/d' KernelSU/kernel/Makefile
-             sed -i '/^CONFIG_KSU_SYSCALL_HOOK=/d' KernelSU/kernel/Makefile
-             # Paksa tulis konfigurasi MATI
-             echo "CONFIG_KSU_MANUAL_HOOK=n" >> KernelSU/kernel/Makefile
-             echo "CONFIG_KSU_SYSCALL_HOOK=n" >> KernelSU/kernel/Makefile
-             echo "✅ [CRITICAL FIX] KernelSU Makefile cleaned (Hooks Disabled)."
-          fi
-          
-          # 5. Apply Manager Support Patch
+          # 3. Apply Manager Support Patch
           echo "🛠️ Applying MamboSU Manager Support Patch..."
           curl -LSs "https://raw.githubusercontent.com/Kingfinik98/gki-builder/15ddb8c469eab27491d5bb0f8f66b7fe2c15d0d7/kernel-patches/ksu/rksu-add-mambosu-manager-support.patch" -o /tmp/rksu_manager.patch
           cd KernelSU
@@ -174,7 +151,7 @@ jobs:
           cd ..
           echo "✅ Manager Patch Applied"
           
-          # 6. Apply SusFS (Kernel Side) - ALUR ASLI
+          # 4. Apply SusFS (Kernel Side) - ALUR ASLI
           if [ "$HOOK_METHOD" = "susfs" ]; then
              echo "➡️ Applying SusFS Kernel Patches (Simonpunk)..."
              git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
@@ -245,19 +222,24 @@ jobs:
              echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> $DEFCONFIG
              echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> $DEFCONFIG
 
-             # === Matikan Fallback ===
+             # === FIX: Enable Kprobes & Hook Requirements ===
+             # Memenuhi permintaan: Membutuhkan CONFIG_KSU_SYSCALL_HOOK=y & CONFIG_KPROBES=y
+             # Mengatasi error: Symbols missing from ksymtab (register_kprobe)
+             echo "CONFIG_KSU_SYSCALL_HOOK=y" >> $DEFCONFIG
+             echo "CONFIG_KPROBES=y" >> $DEFCONFIG
+             echo "CONFIG_KRETPROBES=y" >> $DEFCONFIG
+             echo "CONFIG_HAVE_KPROBES=y" >> $DEFCONFIG
+             echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG
+             echo "CONFIG_HAVE_SYSCALL_TRACEPOINTS=y" >> $DEFCONFIG
+             
+             # Matikan Manual Hook jika SusFS memprioritaskan SyS_Kprobes
              echo "CONFIG_KSU_MANUAL_HOOK=n" >> $DEFCONFIG
-             echo "CONFIG_KSU_HAS_MANUAL_HOOK=n" >> $DEFCONFIG
-             echo "CONFIG_KSU_SYSCALL_HOOK=n" >> $DEFCONFIG
-
-             # === ABI Safe ===
-             echo "CONFIG_KPROBES=n" >> $DEFCONFIG
-             echo "CONFIG_KPROBE_EVENTS=n" >> $DEFCONFIG
           else
              # === Kprobes Mode ===
              echo "CONFIG_KSU_SUSFS=n" >> $DEFCONFIG
              echo "CONFIG_KSU_MANUAL_HOOK=n" >> $DEFCONFIG
              echo "CONFIG_KSU_HAS_MANUAL_HOOK=n" >> $DEFCONFIG
+             echo "CONFIG_KSU_SYSCALL_HOOK=y" >> $DEFCONFIG
              echo "CONFIG_KPROBES=y" >> $DEFCONFIG
              echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG
           fi
