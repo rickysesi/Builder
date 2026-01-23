@@ -139,14 +139,32 @@ jobs:
           done
           echo "✅ Existing MamboSU drivers removed"
           
-          # 2. Setup KernelSU method
+          # 2. PRE-SETUP FIX: Force Disable Kprobes at Source Level
+          # Tujuan: Mencegah KernelSU setup.sh mendeteksi kprobe di tree dan mengaktifkan Manual Hook.
+          # Ini kunci untuk mencegah error "CONFIG_KSU_MANUAL_HOOK" muncul di log.
+          echo "🛡️ [PRE-SETUP] Disabling Kprobes at source level to prevent Auto-detection..."
+          sed -i 's/CONFIG_KPROBES=y/CONFIG_KPROBES=n/g' arch/arm64/configs/gki_defconfig
+          sed -i 's/CONFIG_KPROBE_EVENTS=y/CONFIG_KPROBE_EVENTS=n/g' arch/arm64/configs/gki_defconfig
+          export KSU_FORCE_DISABLE_KPROBES=1
+          echo "✅ [PRE-SETUP] Kprobes disabled at source."
+          
+          # 3. Setup KernelSU method
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           
-          # Menggunakan branch main untuk semua mode
           echo "➡️ Using rsuntk/KernelSU setup -> branch main"
           curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
           
-          # 3. Apply Manager Support Patch manager MamboSU
+          # 4. POST-SETUP FIX: Force Override Makefile
+          # Tujuan: Memastikan CONFIG_KSU_MANUAL_HOOK dan CONFIG_KSU_SYSCALL_HOOK mati total
+          # di KernelSU Makefile setelah setup.sh selesai jalan.
+          echo "🛡️ [POST-SETUP] Forcing KernelSU Hook Mode config..."
+          if [ -f "KernelSU/kernel/Makefile" ]; then
+             sed -i 's/CONFIG_KSU_MANUAL_HOOK=y/CONFIG_KSU_MANUAL_HOOK=n/g' KernelSU/kernel/Makefile || true
+             sed -i 's/CONFIG_KSU_SYSCALL_HOOK=y/CONFIG_KSU_SYSCALL_HOOK=n/g' KernelSU/kernel/Makefile || true
+             echo "✅ [POST-SETUP] KSU Makefile cleaned."
+          fi
+          
+          # 5. Apply Manager Support Patch manager MamboSU
           echo "🛠️ Applying MamboSU Manager Support Patch..."
           curl -LSs "https://raw.githubusercontent.com/Kingfinik98/gki-builder/15ddb8c469eab27491d5bb0f8f66b7fe2c15d0d7/kernel-patches/ksu/rksu-add-mambosu-manager-support.patch" -o /tmp/rksu_manager.patch
           cd KernelSU
@@ -154,7 +172,7 @@ jobs:
           cd ..
           echo "✅ Manager Patch Applied"
           
-          # 4. Apply SusFS (Kernel Side) 
+          # 6. Apply SusFS (Kernel Side) 
           if [ "$HOOK_METHOD" = "susfs" ]; then
              echo "➡️ Applying SusFS Kernel Patches (Simonpunk)..."
              git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
@@ -199,13 +217,13 @@ jobs:
       - name: Inject All Kernel Configs
         working-directory: gki/common
         run: |
-          echo "⚙️ Menambahkan konfigurasi kernel (Final Fix ABI)"
+          echo "⚙️ Menambahkan konfigurasi kernel (Final Fix)"
           DEFCONFIG="arch/arm64/configs/gki_defconfig"
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
           
           if [ "$HOOK_METHOD" = "susfs" ]; then
-            # KONFIG FINAL  (Fix ABI & SusFS)
+            # KONFIG FINAL DARI USER (Fix ABI & SusFS)
             cat >> $DEFCONFIG <<EOF
             # === KernelSU core ===
             CONFIG_KSU=y
@@ -237,7 +255,7 @@ jobs:
             CONFIG_KPROBE_EVENTS=n
             EOF
           else
-            # Kprobes Mode
+            # Kprobes Mode (Standard)
             cat >> $DEFCONFIG <<EOF
             CONFIG_KSU=y
             CONFIG_KPM=y
