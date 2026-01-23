@@ -145,8 +145,8 @@ jobs:
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           
           if [ "$HOOK_METHOD" = "susfs" ]; then
-             echo "➡️ Mode: SuSFS (Using rsuntk/KernelSU setup -> branch susfs-rksu-master)"
-             curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-rksu-master
+             echo "➡️ Mode: SuSFS (Using rsuntk/KernelSU setup -> branch main)"
+             curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
           else
              echo "➡️ Mode: Kprobes/Rissu (Using RapliVx/KernelSU setup -> branch main)"
              curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
