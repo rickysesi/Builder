@@ -140,8 +140,6 @@ jobs:
           echo "✅ Existing MamboSU drivers removed"
           
           # 2. PRE-SETUP FIX: Force Disable Kprobes at Source Level
-          # Tujuan: Mencegah KernelSU setup.sh mendeteksi kprobe di tree dan mengaktifkan Manual Hook.
-          # Ini kunci untuk mencegah error "CONFIG_KSU_MANUAL_HOOK" muncul di log.
           echo "🛡️ [PRE-SETUP] Disabling Kprobes at source level to prevent Auto-detection..."
           sed -i 's/CONFIG_KPROBES=y/CONFIG_KPROBES=n/g' arch/arm64/configs/gki_defconfig
           sed -i 's/CONFIG_KPROBE_EVENTS=y/CONFIG_KPROBE_EVENTS=n/g' arch/arm64/configs/gki_defconfig
@@ -155,8 +153,6 @@ jobs:
           curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
           
           # 4. POST-SETUP FIX: Force Override Makefile
-          # Tujuan: Memastikan CONFIG_KSU_MANUAL_HOOK dan CONFIG_KSU_SYSCALL_HOOK mati total
-          # di KernelSU Makefile setelah setup.sh selesai jalan.
           echo "🛡️ [POST-SETUP] Forcing KernelSU Hook Mode config..."
           if [ -f "KernelSU/kernel/Makefile" ]; then
              sed -i 's/CONFIG_KSU_MANUAL_HOOK=y/CONFIG_KSU_MANUAL_HOOK=n/g' KernelSU/kernel/Makefile || true
@@ -214,101 +210,85 @@ jobs:
           echo "🧹 [Clean-Up] Deleting check_defconfig"
           sed -i 's/check_defconfig//' gki/common/build.config.gki
 
+      # --- ROBUST CONFIG INJECTION (NO HEREDOC ERRORS) ---
       - name: Inject All Kernel Configs
         working-directory: gki/common
         run: |
-          echo "⚙️ Menambahkan konfigurasi kernel (Final Fix)"
+          echo "⚙️ Menambahkan konfigurasi kernel (Robust Echo Method)"
           DEFCONFIG="arch/arm64/configs/gki_defconfig"
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
           
+          # Base Configs
+          echo "CONFIG_KSU=y" >> $DEFCONFIG
+          echo "CONFIG_KPM=y" >> $DEFCONFIG
+          
           if [ "$HOOK_METHOD" = "susfs" ]; then
-            # KONFIG FINAL DARI USER (Fix ABI & SusFS)
-            cat >> $DEFCONFIG <<EOF
-            # === KernelSU core ===
-            CONFIG_KSU=y
-            CONFIG_KPM=y
+             # === SusFS Core ===
+             echo "CONFIG_KSU_SUSFS=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> $DEFCONFIG
 
-            # === SusFS ===
-            CONFIG_KSU_SUSFS=y
-            CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
-            CONFIG_KSU_SUSFS_SUS_PATH=y
-            CONFIG_KSU_SUSFS_SUS_MOUNT=y
-            CONFIG_KSU_SUSFS_SUS_KSTAT=y
-            CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
-            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
-            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
-            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
-            CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
-            CONFIG_KSU_SUSFS_SPOOF_UNAME=y
-            CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
-            CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
-            CONFIG_KSU_SUSFS_ENABLE_LOG=y
+             # === Matikan Semua Fallback ===
+             echo "CONFIG_KSU_MANUAL_HOOK=n" >> $DEFCONFIG
+             echo "CONFIG_KSU_HAS_MANUAL_HOOK=n" >> $DEFCONFIG
+             echo "CONFIG_KSU_SYSCALL_HOOK=n" >> $DEFCONFIG
 
-            # === MATIKAN SEMUA FALLBACK ===
-            CONFIG_KSU_MANUAL_HOOK=n
-            CONFIG_KSU_HAS_MANUAL_HOOK=n
-            CONFIG_KSU_SYSCALL_HOOK=n
-
-            # === ABI SAFE (INI KUNCI) ===
-            CONFIG_KPROBES=n
-            CONFIG_KPROBE_EVENTS=n
-            EOF
+             # === ABI Safe (INI KUNCI) ===
+             echo "CONFIG_KPROBES=n" >> $DEFCONFIG
+             echo "CONFIG_KPROBE_EVENTS=n" >> $DEFCONFIG
           else
-            # Kprobes Mode (Standard)
-            cat >> $DEFCONFIG <<EOF
-            CONFIG_KSU=y
-            CONFIG_KPM=y
-            CONFIG_KSU_SUSFS=n
-            CONFIG_KPROBES=y
-            CONFIG_KPROBE_EVENTS=y
-            EOF
+             # === Kprobes Mode ===
+             echo "CONFIG_KSU_SUSFS=n" >> $DEFCONFIG
+             echo "CONFIG_KSU_MANUAL_HOOK=n" >> $DEFCONFIG
+             echo "CONFIG_KSU_HAS_MANUAL_HOOK=n" >> $DEFCONFIG
+             echo "CONFIG_KPROBES=y" >> $DEFCONFIG
+             echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG
           fi
           
           # Performance Tuning
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
-            cat >> $DEFCONFIG <<EOF
-            # --- MediaTek Performance Tuning ---
-            CONFIG_HZ=500
-            EOF
+            echo "CONFIG_HZ=500" >> $DEFCONFIG
             echo "✅ [MediaTek] Applied HZ=500 config."
           elif [ "$PERFORMANCE_PATCH" = "Universal" ]; then
-            cat >> $DEFCONFIG <<EOF
-            # --- Universal Configuration ---
-            CONFIG_HZ_300=y
-            CONFIG_CPU_FREQ=y
-            CONFIG_HIGH_RES_TIMERS=y
-            EOF
+            echo "CONFIG_HZ_300=y" >> $DEFCONFIG
+            echo "CONFIG_CPU_FREQ=y" >> $DEFCONFIG
+            echo "CONFIG_HIGH_RES_TIMERS=y" >> $DEFCONFIG
             echo "✅ [Universal] Applied universal configuration."
           fi
           
           # Additional Optimasi
-          cat >> $DEFCONFIG <<EOF
-          # Add additional tmpfs config setting
-          CONFIG_TMPFS_XATTR=y
-          CONFIG_TMPFS_POSIX_ACL=y
-          # Add additional config setting
-          CONFIG_IP_NF_TARGET_TTL=y
-          CONFIG_IP6_NF_TARGET_HL=y
-          CONFIG_IP6_NF_MATCH_HL=y
-          # Add BBR Config
-          CONFIG_TCP_CONG_ADVANCED=y
-          CONFIG_TCP_CONG_BBR=y
-          CONFIG_NET_SCH_FQ=y
-          CONFIG_TCP_CONG_BIC=n
-          CONFIG_TCP_CONG_WESTWOOD=n
-          CONFIG_TCP_CONG_HTCP=n
-          CONFIG_DEFAULT_BBR=y
-          # Optimasi tambahan (Smooth & Responsiveness)
-          CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
-          CONFIG_SCHED_TUNE=y
-          CONFIG_MQ_IOSCHED_KYBER=y
-          CONFIG_MQ_IOSCHED_BFQ=y
-          CONFIG_IOSCHED_BFQ=y
-          CONFIG_BFQ_GROUP_IOSCHED=y
-          CONFIG_ZRAM=y
-          CONFIG_ZRAM_WRITEBACK=y
-          EOF
+          echo "CONFIG_TMPFS_XATTR=y" >> $DEFCONFIG
+          echo "CONFIG_TMPFS_POSIX_ACL=y" >> $DEFCONFIG
+          echo "CONFIG_IP_NF_TARGET_TTL=y" >> $DEFCONFIG
+          echo "CONFIG_IP6_NF_TARGET_HL=y" >> $DEFCONFIG
+          echo "CONFIG_IP6_NF_MATCH_HL=y" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_ADVANCED=y" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_BBR=y" >> $DEFCONFIG
+          echo "CONFIG_NET_SCH_FQ=y" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_BIC=n" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_WESTWOOD=n" >> $DEFCONFIG
+          echo "CONFIG_TCP_CONG_HTCP=n" >> $DEFCONFIG
+          echo "CONFIG_DEFAULT_BBR=y" >> $DEFCONFIG
+          echo "CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y" >> $DEFCONFIG
+          echo "CONFIG_SCHED_TUNE=y" >> $DEFCONFIG
+          echo "CONFIG_MQ_IOSCHED_KYBER=y" >> $DEFCONFIG
+          echo "CONFIG_MQ_IOSCHED_BFQ=y" >> $DEFCONFIG
+          echo "CONFIG_IOSCHED_BFQ=y" >> $DEFCONFIG
+          echo "CONFIG_BFQ_GROUP_IOSCHED=y" >> $DEFCONFIG
+          echo "CONFIG_ZRAM=y" >> $DEFCONFIG
+          echo "CONFIG_ZRAM_WRITEBACK=y" >> $DEFCONFIG
 
       - name: Set version
         working-directory: gki/common
