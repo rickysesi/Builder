@@ -132,7 +132,7 @@ jobs:
           
           # 2. Setup KernelSU (Main Branch -> Standard Kprobes)
           echo "➡️ Using rsuntk/KernelSU setup -> branch main (Standard Kprobes)"
-          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
+          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
           
           # 3. Apply Manager Support Patch
           echo "🛠️ Applying MamboSU Manager Support Patch..."
