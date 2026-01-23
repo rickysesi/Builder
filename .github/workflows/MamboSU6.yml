@@ -1,4 +1,5 @@
 name: BoltX Kernel MamboSU6
+# susfs is not 100% fixed, just wait for it to be fixed
 
 on:
   workflow_dispatch:
