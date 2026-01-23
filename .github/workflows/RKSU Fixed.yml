@@ -1,4 +1,4 @@
-name: BoltX MamboSU Hook
+name: BoltX RKSU FIXED
 
 on:
   workflow_dispatch:
