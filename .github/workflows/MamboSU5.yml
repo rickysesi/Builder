@@ -142,7 +142,7 @@ jobs:
           # 2. Setup KernelSU method
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           
-          # Menggunakan branch main untuk semua mode sesuai instruksi terakhir
+          # Menggunakan branch main untuk semua mode
           echo "➡️ Using rsuntk/KernelSU setup -> branch main"
           curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
           
@@ -169,11 +169,10 @@ jobs:
           
           echo "✅ MamboSU & Hook Method Setup Complete"
 
-      # --- STEP APPLY COMMON FIXES DIHAPUS SESUAI INSTRUKSI ---
       - name: Apply common fixes
         working-directory: gki/common
         run: |
-          echo "⏭️ Skipping common fixes (not needed for current SusFS setup)"
+          echo "⏭️ Skipping common fixes"
 
       - name: Fix Stack Protector
         working-directory: gki/common
@@ -200,62 +199,68 @@ jobs:
       - name: Inject All Kernel Configs
         working-directory: gki/common
         run: |
-          echo "⚙️ Menambahkan konfigurasi kernel (Final Solution)"
+          echo "⚙️ Menambahkan konfigurasi kernel (Final Fix ABI)"
           DEFCONFIG="arch/arm64/configs/gki_defconfig"
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
           
-          # Base Configs
-          cat >> $DEFCONFIG <<EOF
-          CONFIG_KSU=y
-          CONFIG_KPM=y
-          EOF
-          
-          # 1️⃣ Force Override: Matikan syscall hook TOTAL (Sesuai Solusi)
-          sed -i 's/CONFIG_KSU_SYSCALL_HOOK=y/CONFIG_KSU_SYSCALL_HOOK=n/g' arch/arm64/configs/gki_defconfig
-
           if [ "$HOOK_METHOD" = "susfs" ]; then
-            # 2️⃣ Konfigurasi SUSFS Lengkap (Sesuai Solusi)
+            # KONFIG FINAL  (Fix ABI & SusFS)
             cat >> $DEFCONFIG <<EOF
-          # === SUSFS v2 ===
-          CONFIG_KSU_SUSFS=y
-          CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_PATH=y
-          CONFIG_KSU_SUSFS_SUS_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
-          # === WAJIB MATI ===
-          CONFIG_KSU_SYSCALL_HOOK=n
-          CONFIG_KPROBES=n
-          CONFIG_KPROBE_EVENTS=n
-          CONFIG_KSU_MANUAL_HOOK=n
-          CONFIG_KSU_HAS_MANUAL_HOOK=n
-          EOF
+            # === KernelSU core ===
+            CONFIG_KSU=y
+            CONFIG_KPM=y
+
+            # === SusFS ===
+            CONFIG_KSU_SUSFS=y
+            CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
+            CONFIG_KSU_SUSFS_SUS_PATH=y
+            CONFIG_KSU_SUSFS_SUS_MOUNT=y
+            CONFIG_KSU_SUSFS_SUS_KSTAT=y
+            CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
+            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
+            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
+            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
+            CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+            CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+            CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+            CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+            CONFIG_KSU_SUSFS_ENABLE_LOG=y
+
+            # === MATIKAN SEMUA FALLBACK ===
+            CONFIG_KSU_MANUAL_HOOK=n
+            CONFIG_KSU_HAS_MANUAL_HOOK=n
+            CONFIG_KSU_SYSCALL_HOOK=n
+
+            # === ABI SAFE (INI KUNCI) ===
+            CONFIG_KPROBES=n
+            CONFIG_KPROBE_EVENTS=n
+            EOF
           else
-            # Kprobes Mode (Standard)
+            # Kprobes Mode
             cat >> $DEFCONFIG <<EOF
-          # --- Kprobes Hook Method ---
-          CONFIG_KSU_SUSFS=n
-          CONFIG_KSU_MANUAL_HOOK=n
-          CONFIG_KSU_HAS_MANUAL_HOOK=n
-          EOF
+            CONFIG_KSU=y
+            CONFIG_KPM=y
+            CONFIG_KSU_SUSFS=n
+            CONFIG_KPROBES=y
+            CONFIG_KPROBE_EVENTS=y
+            EOF
           fi
           
           # Performance Tuning
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
             cat >> $DEFCONFIG <<EOF
-          # --- MediaTek Performance Tuning ---
-          CONFIG_HZ=500
-          EOF
+            # --- MediaTek Performance Tuning ---
+            CONFIG_HZ=500
+            EOF
             echo "✅ [MediaTek] Applied HZ=500 config."
           elif [ "$PERFORMANCE_PATCH" = "Universal" ]; then
             cat >> $DEFCONFIG <<EOF
-          # --- Universal Configuration ---
-          CONFIG_HZ_300=y
-          CONFIG_CPU_FREQ=y
-          CONFIG_HIGH_RES_TIMERS=y
-          EOF
+            # --- Universal Configuration ---
+            CONFIG_HZ_300=y
+            CONFIG_CPU_FREQ=y
+            CONFIG_HIGH_RES_TIMERS=y
+            EOF
             echo "✅ [Universal] Applied universal configuration."
           fi
           
