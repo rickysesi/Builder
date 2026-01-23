@@ -27,7 +27,7 @@ on:
         description: 'Select Hook Method'
         required: true
         type: choice
-        default: 'susfs'
+        default: 'kprobes'
         options:
           - 'susfs'
           - 'kprobes'
@@ -138,12 +138,12 @@ jobs:
           done
           echo "✅ Existing MamboSU drivers removed"
           
-          # 2. Setup KernelSU method
-          # Updated to susfs-rksu-master as requested to fix ABI symbol issues
-          echo "➡️ Using rsuntk/KernelSU setup -> branch susfs-rksu-master"
-          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-rksu-master
+          # 2. Setup KernelSU method (Main Branch Only - No SusFS)
+          # Menggunakan branch main untuk mode Manual Hook standar yang stabil
+          echo "➡️ Using rsuntk/KernelSU setup -> branch main"
+          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
           
-          # 3. Apply Manager Support Patch
+          # 3. Apply Manager Support Patch manager MamboSU
           echo "🛠️ Applying MamboSU Manager Support Patch..."
           curl -LSs "https://raw.githubusercontent.com/Kingfinik98/gki-builder/15ddb8c469eab27491d5bb0f8f66b7fe2c15d0d7/kernel-patches/ksu/rksu-add-mambosu-manager-support.patch" -o /tmp/rksu_manager.patch
           cd KernelSU
@@ -151,18 +151,8 @@ jobs:
           cd ..
           echo "✅ Manager Patch Applied"
           
-          # 4. Apply SusFS (Kernel Side) - ALUR ASLI
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-             echo "➡️ Applying SusFS Kernel Patches (Simonpunk)..."
-             git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
-             rm -rf sus/.git
-             susfs=sus/kernel_patches
-             cp -r $susfs/fs .
-             cp -r $susfs/include .
-             cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
-             patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
-             echo "[✓] SUSFS patched"
-          fi
+          # SusFS PATCHES DIHAPUS TOTAL SESUAI INSTRUKSI USER
+          echo "⏭️ Skipping SusFS patches (Clean Build)."
           
           echo "✅ MamboSU & Hook Method Setup Complete"
 
@@ -196,85 +186,83 @@ jobs:
       - name: Inject All Kernel Configs
         working-directory: gki/common
         run: |
-          echo "⚙️ Menambahkan konfigurasi kernel (Robust Echo Method)"
+          echo "⚙️ Menambahkan konfigurasi kernel (Clean Kprobes Mode)"
           DEFCONFIG="arch/arm64/configs/gki_defconfig"
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
           
+          # === KONFIGURASI UTAMA (SUSFS DIBERSIHKAN TOTAL) ===
           echo "CONFIG_KSU=y" >> $DEFCONFIG
           echo "CONFIG_KPM=y" >> $DEFCONFIG
           
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-             # === SusFS Core ===
-             echo "CONFIG_KSU_SUSFS=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> $DEFCONFIG
-             echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> $DEFCONFIG
+          # === FORCE KPROBES AKTIF (INSTRUKSI USER) ===
+          echo "CONFIG_KPROBES=y" >> $DEFCONFIG
+          echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG
+          
+          # === MATIKAN SUSFS ===
+          echo "CONFIG_KSU_SUSFS=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_SUS_PATH=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_SUS_MOUNT=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_SUS_KSTAT=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_ENABLE_LOG=n" >> $DEFCONFIG
+          echo "CONFIG_KSU_SUSFS_SUS_MAP=n" >> $DEFCONFIG
 
-             # === FIX: Enable Kprobes & Hook Requirements ===
-             # Memenuhi permintaan: Membutuhkan CONFIG_KSU_SYSCALL_HOOK=y & CONFIG_KPROBES=y
-             # Mengatasi error: Symbols missing from ksymtab (register_kprobe)
-             echo "CONFIG_KSU_SYSCALL_HOOK=y" >> $DEFCONFIG
-             echo "CONFIG_KPROBES=y" >> $DEFCONFIG
-             echo "CONFIG_KRETPROBES=y" >> $DEFCONFIG
-             echo "CONFIG_HAVE_KPROBES=y" >> $DEFCONFIG
-             echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG
-             echo "CONFIG_HAVE_SYSCALL_TRACEPOINTS=y" >> $DEFCONFIG
-             
-             # Matikan Manual Hook jika SusFS memprioritaskan SyS_Kprobes
-             echo "CONFIG_KSU_MANUAL_HOOK=n" >> $DEFCONFIG
-          else
-             # === Kprobes Mode ===
-             echo "CONFIG_KSU_SUSFS=n" >> $DEFCONFIG
-             echo "CONFIG_KSU_MANUAL_HOOK=n" >> $DEFCONFIG
-             echo "CONFIG_KSU_HAS_MANUAL_HOOK=n" >> $DEFCONFIG
-             echo "CONFIG_KSU_SYSCALL_HOOK=y" >> $DEFCONFIG
-             echo "CONFIG_KPROBES=y" >> $DEFCONFIG
-             echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG
-          fi
+          # === MATIKAN MANUAL HOOK (DIATUR setup.sh KALKULASI) ===
+          echo "CONFIG_KSU_SYSCALL_HOOK=n" >> $DEFCONFIG
+          # Jangan set MANUAL_HOOK=n disini, biarkan setup.sh mengaturnya (jadi y).
+          # Tapi syaratnya adalah KPROBES=y (sudah dilakukan di atas).
           
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
-            echo "CONFIG_HZ=500" >> $DEFCONFIG
+            cat >> $DEFCONFIG <<EOF
+            # --- MediaTek Performance Tuning ---
+            CONFIG_HZ=500
+            EOF
             echo "✅ [MediaTek] Applied HZ=500 config."
           elif [ "$PERFORMANCE_PATCH" = "Universal" ]; then
-            echo "CONFIG_HZ_300=y" >> $DEFCONFIG
-            echo "CONFIG_CPU_FREQ=y" >> $DEFCONFIG
-            echo "CONFIG_HIGH_RES_TIMERS=y" >> $DEFCONFIG
+            cat >> $DEFCONFIG <<EOF
+            # --- Universal Configuration ---
+            CONFIG_HZ_300=y
+            CONFIG_CPU_FREQ=y
+            CONFIG_HIGH_RES_TIMERS=y
+            EOF
             echo "✅ [Universal] Applied universal configuration."
           fi
           
           # Additional Optimasi
-          echo "CONFIG_TMPFS_XATTR=y" >> $DEFCONFIG
-          echo "CONFIG_TMPFS_POSIX_ACL=y" >> $DEFCONFIG
-          echo "CONFIG_IP_NF_TARGET_TTL=y" >> $DEFCONFIG
-          echo "CONFIG_IP6_NF_TARGET_HL=y" >> $DEFCONFIG
-          echo "CONFIG_IP6_NF_MATCH_HL=y" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_ADVANCED=y" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_BBR=y" >> $DEFCONFIG
-          echo "CONFIG_NET_SCH_FQ=y" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_BIC=n" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_WESTWOOD=n" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_HTCP=n" >> $DEFCONFIG
-          echo "CONFIG_DEFAULT_BBR=y" >> $DEFCONFIG
-          echo "CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y" >> $DEFCONFIG
-          echo "CONFIG_SCHED_TUNE=y" >> $DEFCONFIG
-          echo "CONFIG_MQ_IOSCHED_KYBER=y" >> $DEFCONFIG
-          echo "CONFIG_MQ_IOSCHED_BFQ=y" >> $DEFCONFIG
-          echo "CONFIG_IOSCHED_BFQ=y" >> $DEFCONFIG
-          echo "CONFIG_BFQ_GROUP_IOSCHED=y" >> $DEFCONFIG
-          echo "CONFIG_ZRAM=y" >> $DEFCONFIG
-          echo "CONFIG_ZRAM_WRITEBACK=y" >> $DEFCONFIG
+          cat >> $DEFCONFIG <<EOF
+          # Add additional tmpfs config setting
+          CONFIG_TMPFS_XATTR=y
+          CONFIG_TMPFS_POSIX_ACL=y
+          # Add additional config setting
+          CONFIG_IP_NF_TARGET_TTL=y
+          CONFIG_IP6_NF_TARGET_HL=y
+          CONFIG_IP6_NF_MATCH_HL=y
+          # Add BBR Config
+          CONFIG_TCP_CONG_ADVANCED=y
+          CONFIG_TCP_CONG_BBR=y
+          CONFIG_NET_SCH_FQ=y
+          CONFIG_TCP_CONG_BIC=n
+          CONFIG_TCP_CONG_WESTWOOD=n
+          CONFIG_TCP_CONG_HTCP=n
+          CONFIG_DEFAULT_BBR=y
+          # Optimasi tambahan (Smooth & Responsiveness)
+          CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
+          CONFIG_SCHED_TUNE=y
+          CONFIG_MQ_IOSCHED_KYBER=y
+          CONFIG_MQ_IOSCHED_BFQ=y
+          CONFIG_IOSCHED_BFQ=y
+          CONFIG_BFQ_GROUP_IOSCHED=y
+          CONFIG_ZRAM=y
+          CONFIG_ZRAM_WRITEBACK=y
+          EOF
 
       - name: Set version
         working-directory: gki/common
@@ -289,10 +277,9 @@ jobs:
           if [ -n "$KERNEL_NAME_INPUT" ]; then
             SUFFIX="-$KERNEL_NAME_INPUT"
           fi
-
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-            SUFFIX="$SUFFIX-ඞ-SuS"
-          fi
+          
+          # Hapus SusFS Suffix (Sesuai Instruksi)
+          # Tidak ada lagi if [ "$HOOK_METHOD" = "susfs" ]; then ...
 
           if [ "$PERFORMANCE_PATCH" = "Snapdragon" ]; then
             SUFFIX="$SUFFIX-Qcom"
@@ -341,9 +328,11 @@ jobs:
       - name: Setup Environment Variables for Packaging
         id: vars
         run: |
+          # Ambil versi DASAR kernel
           BASE_LINUX_VERSION=$(make -s kernelversion -C gki/common | tr -d '\n\r')
           echo "BASE_LINUX_VERSION=$BASE_LINUX_VERSION" >> $GITHUB_ENV
           
+          # Ambil versi LENGKAP kernel (dengan suffix)
           LINUX_VERSION=$(make -s kernelversion -C gki/common | tr -d '\n\r')
           echo "LINUX_VERSION=$LINUX_VERSION" >> $GITHUB_ENV
           
@@ -358,16 +347,14 @@ jobs:
           STATUS="${{ github.event.inputs.release_status }}"
           CLANG_VERSION_STRING="${{ github.event.inputs.clang_version }}"
 
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-            VARIANT="SusFS"
-          else
-            VARIANT="Kprobes"
-          fi
-
+          # SusFS Logo dihapus jadi ini default
           BUILD_DATE=$(date +"%Y%m%d")
           KBUILD_BUILD_TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           RELEASE="v${BUILD_DATE}"
           
+          # Nama File Zip tanpa SusFS suffix (jika user tidak isi custom name)
+          # Jika user pilih 'susfs' di dropdown, kita abaikan suffixnya karena SusFS dimatikan.
+          VARIANT="Kprobes"
           AK3_ZIP_NAME="AK3-${KERNEL_NAME}-${RELEASE}-${BASE_LINUX_VERSION}-${VARIANT}.zip"
           
           echo "KERNEL_NAME=$KERNEL_NAME" >> $GITHUB_ENV
@@ -377,7 +364,7 @@ jobs:
           echo "AK3_ZIP_NAME=$AK3_ZIP_NAME" >> $GITHUB_ENV
           echo "KBUILD_BUILD_TIMESTAMP=$KBUILD_BUILD_TIMESTAMP" >> $GITHUB_ENV
           echo "KSU=MamboSU" >> $GITHUB_ENV
-          echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/raw/gki-android12-5.10/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g')" >> $GITHUB_ENV
+          # SusFS Version dihapus
           echo "COMPILER_STRING=$CLANG_VERSION_STRING" >> $GITHUB_ENV
 
       - name: Package Kernel (AnyKernel3)
@@ -407,12 +394,12 @@ jobs:
           GKI_RELEASES_REPO="https://github.com/Kingfinik98/Kernel-Release"
           REPO_PATH=$(echo "$GKI_RELEASES_REPO" | sed 's|https://github.com/||')
           RELEASE_TAG="${{ env.KERNEL_NAME }}-${{ env.LINUX_VERSION }}-${{ env.RELEASE }}"
+          # SusFS Logo dihapus dari catatan rilis
           RELEASE_NOTES="🐧 *Linux Version*: ${{ env.LINUX_VERSION }}
           📅 *Build Date*: ${{ env.KBUILD_BUILD_TIMESTAMP }}
           📛 *MamboSU*: ${{ env.KSU }}
-          ඞ *SuSFS*: ${{ env.SUSFS_VERSION }}
           🔰 *Compiler*: ${{ env.COMPILER_STRING }}
-          🔗 *Hook Method*: ${{ env.HOOK_METHOD }}"
+          🔗 *Hook Method*: Kprobes (Standard)"
           gh release create "$RELEASE_TAG" "${{ env.AK3_ZIP_NAME }}" \
             --title "$RELEASE_TAG" \
             --notes "$RELEASE_NOTES" \
