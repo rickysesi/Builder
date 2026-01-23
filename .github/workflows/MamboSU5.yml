@@ -111,14 +111,12 @@ jobs:
         working-directory: gki/common
         run: |
           echo "🚀 [MediaTek] Applying performance tuning via defconfig (HZ=500)."
-          echo "✅ [MediaTek] Tuning will be applied in the 'Inject All Kernel Configs' step."
 
       - name: Apply Universal Configuration
         if: github.event.inputs.performance_patch == 'Universal'
         working-directory: gki/common
         run: |
           echo "🌐 [Universal] Using universal configuration for maximum compatibility."
-          echo "✅ [Universal] No SoC-specific performance tuning will be applied."
 
       - name: Tweak build config
         run: |
@@ -144,13 +142,9 @@ jobs:
           # 2. Setup KernelSU method
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-             echo "➡️ Mode: SuSFS (Using rsuntk/KernelSU setup -> branch main)"
-             curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
-          else
-             echo "➡️ Mode: Kprobes/Rissu (Using RapliVx/KernelSU setup -> branch main)"
-             curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
-          fi
+          # Menggunakan branch main untuk semua mode sesuai instruksi terakhir
+          echo "➡️ Using rsuntk/KernelSU setup -> branch main"
+          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
           
           # 3. Apply Manager Support Patch manager MamboSU
           echo "🛠️ Applying MamboSU Manager Support Patch..."
@@ -171,18 +165,6 @@ jobs:
              cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
              patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
              echo "[✓] SUSFS patched"
-             
-             # --- FIX KOMPATIBILITAS SUSFS V2.0.0 ---
-             # Menyesuaikan KernelSU yang memanggil fungsi lama dengan SusFS v2.0.0 yang menggunakan fungsi baru
-             echo "🔧 Fixing KernelSU Compatibility for SusFS v2.0.0..."
-             if [ -f "drivers/kernelsu/supercalls.c" ]; then
-               # Ganti pemanggilan CMD lama dengan baru
-               sed -i 's/CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS/CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS/g' drivers/kernelsu/supercalls.c
-               # Ganti pemanggilan fungsi lama dengan baru
-               sed -i 's/susfs_set_hide_sus_mnts_for_all_procs/susfs_set_hide_sus_mnts_for_non_su_procs/g' drivers/kernelsu/supercalls.c
-               echo "✅ Compatibility fix applied (ALL_PROCS -> NON_SU_PROCS)."
-             fi
-             # -----------------------------------------
           fi
           
           echo "✅ MamboSU & Hook Method Setup Complete"
@@ -218,44 +200,40 @@ jobs:
       - name: Inject All Kernel Configs
         working-directory: gki/common
         run: |
-          echo "⚙️ Menambahkan konfigurasi kernel"
+          echo "⚙️ Menambahkan konfigurasi kernel (Final Solution)"
           DEFCONFIG="arch/arm64/configs/gki_defconfig"
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
+          
+          # Base Configs
           cat >> $DEFCONFIG <<EOF
-          # ===============================================
-          # Konfigurasi KSU NEXT (Base)
           CONFIG_KSU=y
           CONFIG_KPM=y
-          CONFIG_KSU_SUSFS_SUS_SU=n
-          CONFIG_KSU_SYSCALL_HOOK=n
-          CONFIG_KPROBES=y
-          CONFIG_KPROBE_EVENTS=y
           EOF
+          
+          # 1️⃣ Force Override: Matikan syscall hook TOTAL (Sesuai Solusi)
+          sed -i 's/CONFIG_KSU_SYSCALL_HOOK=y/CONFIG_KSU_SYSCALL_HOOK=n/g' arch/arm64/configs/gki_defconfig
+
           if [ "$HOOK_METHOD" = "susfs" ]; then
+            # 2️⃣ Konfigurasi SUSFS Lengkap (Sesuai Solusi)
             cat >> $DEFCONFIG <<EOF
-          # --- SUSFS Method (includes Kprobes/Hybrid) ---
+          # === SUSFS v2 ===
           CONFIG_KSU_SUSFS=y
           CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
           CONFIG_KSU_SUSFS_SUS_PATH=y
           CONFIG_KSU_SUSFS_SUS_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
           CONFIG_KSU_SUSFS_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
           CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n
-          CONFIG_KSU_SUSFS_TRY_UMOUNT=n
-          CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=n
-          CONFIG_KSU_SUSFS_SPOOF_UNAME=y
-          CONFIG_KSU_SUSFS_ENABLE_LOG=y
           CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
-          CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
-          CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+          # === WAJIB MATI ===
+          CONFIG_KSU_SYSCALL_HOOK=n
+          CONFIG_KPROBES=n
+          CONFIG_KPROBE_EVENTS=n
           CONFIG_KSU_MANUAL_HOOK=n
           CONFIG_KSU_HAS_MANUAL_HOOK=n
           EOF
           else
+            # Kprobes Mode (Standard)
             cat >> $DEFCONFIG <<EOF
           # --- Kprobes Hook Method ---
           CONFIG_KSU_SUSFS=n
@@ -263,6 +241,8 @@ jobs:
           CONFIG_KSU_HAS_MANUAL_HOOK=n
           EOF
           fi
+          
+          # Performance Tuning
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
             cat >> $DEFCONFIG <<EOF
           # --- MediaTek Performance Tuning ---
@@ -278,6 +258,8 @@ jobs:
           EOF
             echo "✅ [Universal] Applied universal configuration."
           fi
+          
+          # Additional Optimasi
           cat >> $DEFCONFIG <<EOF
           # Add additional tmpfs config setting
           CONFIG_TMPFS_XATTR=y
