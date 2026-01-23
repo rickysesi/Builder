@@ -1,3 +1,12 @@
+
+
+Siap, ini adalah **FULL KODE** lengkap (BoltX Kernel MamboSU5) dengan bagian **Create GitHub Release** yang sudah saya betulkan total.
+
+Saya sudah merapikan bagian Release Notes-nya agar saat rilis nanti tulisannya menyatu menjadi satu blok utuh (tidak terpotong/terpisah).
+
+Silakan copy seluruh kode di bawah ini langsung ke file `.yml` Anda:
+
+```yaml
 name: BoltX Kernel MamboSU5
 
 on:
@@ -341,19 +350,24 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           echo "🚀 Creating GitHub Release..."
+
           GKI_RELEASES_REPO="https://github.com/Kingfinik98/Kernel-Release"
-          REPO_PATH=$(echo "$GKI_RELEASES_REPO" | sed 's|https://github.com/||')
+          REPO_PATH="${GKI_RELEASES_REPO#https://github.com/}"
+          
           RELEASE_TAG="${{ env.KERNEL_NAME }}-${{ env.LINUX_VERSION }}-${{ env.RELEASE }}"
+
           RELEASE_NOTES="🐧 *Linux Version*: ${{ env.LINUX_VERSION }}
           📅 *Build Date*: ${{ env.KBUILD_BUILD_TIMESTAMP }}
           📛 *MamboSU*: ${{ env.KSU }}
-          🔰 *Compiler*: ${{ env.COMPILER_STRING }}"
+          🔰 *Compiler*: ${{ env.COMPILER_STRING }}
           🔗 *Hook Method*: Standard Kprobes"
+
           gh release create "$RELEASE_TAG" "${{ env.AK3_ZIP_NAME }}" \
             --title "$RELEASE_TAG" \
             --notes "$RELEASE_NOTES" \
             --repo "$REPO_PATH" \
             --latest
+
           echo "✅ Release created successfully at https://github.com/$REPO_PATH/releases/tag/$RELEASE_TAG"
 
       - name: Upload Build Log
@@ -363,3 +377,4 @@ jobs:
           name: build-log-${{ github.event.inputs.performance_patch }}
           path: gki/out/android12-5.10/common/build.log
           if-no-files-found: warn
+```
