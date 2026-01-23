@@ -87,7 +87,6 @@ jobs:
           git remote add rama https://github.com/ramabondanp/android_kernel_common-5.10.git
           git fetch -j12 rama
           git checkout -b update-android12-5.10-staging rama/android12-5.10-staging
-          # Setup KernelSU-KowSU
           rm -rf drivers/staging/kernelsu
 
       - name: Apply Snapdragon Performance Patch
@@ -140,27 +139,117 @@ jobs:
           echo "✅ Existing MamboSU drivers removed"
           
           # 2. PRE-SETUP FIX: Force Disable Kprobes at Source Level
-          echo "🛡️ [PRE-SETUP] Disabling Kprobes at source level to prevent Auto-detection..."
+          echo "🛡️ [PRE-SETUP] Disabling Kprobes at source level..."
           sed -i 's/CONFIG_KPROBES=y/CONFIG_KPROBES=n/g' arch/arm64/configs/gki_defconfig
           sed -i 's/CONFIG_KPROBE_EVENTS=y/CONFIG_KPROBE_EVENTS=n/g' arch/arm64/configs/gki_defconfig
           export KSU_FORCE_DISABLE_KPROBES=1
-          echo "✅ [PRE-SETUP] Kprobes disabled at source."
           
           # 3. Setup KernelSU method
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
-          
           echo "➡️ Using rsuntk/KernelSU setup -> branch main"
           curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
           
-          # 4. POST-SETUP FIX: Force Override Makefile
-          echo "🛡️ [POST-SETUP] Forcing KernelSU Hook Mode config..."
+          # 4. FIX INTERNAL KSU BUILD SYSTEM (CRITICAL FIX)
+          # Tujuan: Mencegah KernelSU memilih Manual Hook otomatis karena melihat Kprobe source.
+          # Kita harus modifikasi KernelSU/kernel/Kconfig agar TIDAK depends on KPROBES.
+          echo "🔧 [CRITICAL FIX] Patching KernelSU internal build system for SusFS..."
+          if [ -f "KernelSU/kernel/Kconfig" ]; then
+             # Hapus depends on KPROBES agar config KSU bisa aktif tanpa Kprobe
+             sed -i 's/depends on KPROBES//g' KernelSU/kernel/Kconfig
+             
+             # Tambahkan Menu SusFS ke KSU Kconfig
+             cat >> KernelSU/kernel/Kconfig <<'KSUEOF'
+             menu "KernelSU - SusFS"
+             config KSU_SUSFS
+                 bool "KernelSU addon - SUSFS"
+                 depends on KSU
+                 default y
+                 help
+                   Patch and Enable SUSFS to kernel with KernelSU.
+
+             config KSU_SUSFS_SUS_PATH
+                 bool "Enable to hide suspicious path (NOT recommended)"
+                 depends on KSU_SUSFS
+                 default y
+                 help
+                   - Allow hiding the user-defined path and all its sub-paths from various system calls.
+
+             config KSU_SUSFS_SUS_MOUNT
+                 bool "Enable to hide suspicious mounts"
+                 depends on KSU_SUSFS
+                 default y
+                 help
+                   - Allow hiding the user-defined mount paths from /proc/self/[mounts|mountinfo|mountstat].
+
+             config KSU_SUSFS_SUS_KSTAT
+                 bool "Enable to spoof suspicious kstat"
+                 depends on KSU_SUSFS
+                 default y
+                 help
+                   - Allow spoofing the kstat of user-defined file/directory.
+
+             config KSU_SUSFS_SPOOF_UNAME
+                 bool "Enable to spoof uname"
+                 depends on KSU_SUSFS
+                 default y
+                 help
+                   - Allow spoofing the string returned by uname syscall to user-defined string.
+
+             config KSU_SUSFS_ENABLE_LOG
+                 bool "Enable logging susfs log to kernel"
+                 depends on KSU_SUSFS
+                 default y
+                 help
+                   - Allow logging susfs log to kernel, uncheck it to completely disable all susfs log.
+
+             config KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS
+                 bool "Enable to automatically hide ksu and susfs symbols from /proc/kallsyms"
+                 depends on KSU_SUSFS
+                 default y
+                 help
+                   - Automatically hide ksu and susfs symbols from '/proc/kallsyms'.
+
+             config KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+                 bool "Enable to spoof /proc/bootconfig (gki) or /proc/cmdline (non-gki)"
+                 depends on KSU_SUSFS
+                 default y
+                 help
+                   - Spoof the output of /proc/bootconfig (gki) or /proc/cmdline (non-gki) with a user-defined file.
+
+             config KSU_SUSFS_OPEN_REDIRECT
+                 bool "Enable to redirect a path to be opened with another path (experimental)"
+                 depends on KSU_SUSFS
+                 default y
+                 help
+                   - Allow redirecting a target path to be opened with another user-defined path.
+
+             config KSU_SUSFS_SUS_MAP
+                 bool "Enable to hide some mmapped real file from different proc maps interfaces"
+                 depends on KSU_SUSFS
+                 default y
+                 help
+                   - Allow hiding mmapped real file from /proc/<pid>/[maps|smaps|smaps_rollup|map_files|mem|pagemap]
+
+             endmenu
+             KSUEOF
+             echo "✅ SusFS Menu injected into KernelSU Kconfig."
+          fi
+          
+          # 5. Nonaktifkan syscall_hook_manager di KSU Kbuild (karena SusFS gak pakai)
+          if [ -f "KernelSU/kernel/Kbuild" ]; then
+             sed -i 's/kernelsu-objs += syscall_hook_manager.o/# kernelsu-objs += syscall_hook_manager.o # SusFS Disabled/' KernelSU/kernel/Kbuild
+             echo "✅ syscall_hook_manager disabled in KSU Kbuild."
+          fi
+          
+          # 6. POST-SETUP FIX: Matikan paksa Manual Hook
+          echo "🔧 [POST-SETUP] Forcing KernelSU Hook Mode config..."
           if [ -f "KernelSU/kernel/Makefile" ]; then
              sed -i 's/CONFIG_KSU_MANUAL_HOOK=y/CONFIG_KSU_MANUAL_HOOK=n/g' KernelSU/kernel/Makefile || true
              sed -i 's/CONFIG_KSU_SYSCALL_HOOK=y/CONFIG_KSU_SYSCALL_HOOK=n/g' KernelSU/kernel/Makefile || true
-             echo "✅ [POST-SETUP] KSU Makefile cleaned."
+             echo "✅ KSU Makefile cleaned."
           fi
-          
-          # 5. Apply Manager Support Patch manager MamboSU
+
+          # 7. Apply Manager Support Patch
           echo "🛠️ Applying MamboSU Manager Support Patch..."
           curl -LSs "https://raw.githubusercontent.com/Kingfinik98/gki-builder/15ddb8c469eab27491d5bb0f8f66b7fe2c15d0d7/kernel-patches/ksu/rksu-add-mambosu-manager-support.patch" -o /tmp/rksu_manager.patch
           cd KernelSU
@@ -168,7 +257,7 @@ jobs:
           cd ..
           echo "✅ Manager Patch Applied"
           
-          # 6. Apply SusFS (Kernel Side) 
+          # 8. Apply SusFS (Kernel Side) 
           if [ "$HOOK_METHOD" = "susfs" ]; then
              echo "➡️ Applying SusFS Kernel Patches (Simonpunk)..."
              git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
@@ -210,7 +299,6 @@ jobs:
           echo "🧹 [Clean-Up] Deleting check_defconfig"
           sed -i 's/check_defconfig//' gki/common/build.config.gki
 
-      # --- ROBUST CONFIG INJECTION (NO HEREDOC ERRORS) ---
       - name: Inject All Kernel Configs
         working-directory: gki/common
         run: |
@@ -219,7 +307,6 @@ jobs:
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
           
-          # Base Configs
           echo "CONFIG_KSU=y" >> $DEFCONFIG
           echo "CONFIG_KPM=y" >> $DEFCONFIG
           
@@ -239,13 +326,14 @@ jobs:
              echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> $DEFCONFIG
              echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> $DEFCONFIG
              echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> $DEFCONFIG
+             echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> $DEFCONFIG
 
-             # === Matikan Semua Fallback ===
+             # === Matikan Fallback ===
              echo "CONFIG_KSU_MANUAL_HOOK=n" >> $DEFCONFIG
              echo "CONFIG_KSU_HAS_MANUAL_HOOK=n" >> $DEFCONFIG
              echo "CONFIG_KSU_SYSCALL_HOOK=n" >> $DEFCONFIG
 
-             # === ABI Safe (INI KUNCI) ===
+             # === ABI Safe ===
              echo "CONFIG_KPROBES=n" >> $DEFCONFIG
              echo "CONFIG_KPROBE_EVENTS=n" >> $DEFCONFIG
           else
@@ -257,7 +345,6 @@ jobs:
              echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG
           fi
           
-          # Performance Tuning
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
             echo "CONFIG_HZ=500" >> $DEFCONFIG
             echo "✅ [MediaTek] Applied HZ=500 config."
@@ -299,7 +386,6 @@ jobs:
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
 
-          # --- PERUBAHAN UTAMA: MEMBANGUN VERSI SESUAI CONTOH ---
           SUFFIX=""
           if [ -n "$KERNEL_NAME_INPUT" ]; then
             SUFFIX="-$KERNEL_NAME_INPUT"
@@ -356,11 +442,9 @@ jobs:
       - name: Setup Environment Variables for Packaging
         id: vars
         run: |
-          # Ambil versi DASAR kernel
           BASE_LINUX_VERSION=$(make -s kernelversion -C gki/common | tr -d '\n\r')
           echo "BASE_LINUX_VERSION=$BASE_LINUX_VERSION" >> $GITHUB_ENV
           
-          # Ambil versi LENGKAP kernel (dengan suffix)
           LINUX_VERSION=$(make -s kernelversion -C gki/common | tr -d '\n\r')
           echo "LINUX_VERSION=$LINUX_VERSION" >> $GITHUB_ENV
           
@@ -375,7 +459,6 @@ jobs:
           STATUS="${{ github.event.inputs.release_status }}"
           CLANG_VERSION_STRING="${{ github.event.inputs.clang_version }}"
 
-          # Tentukan nama Varian untuk nama file zip
           if [ "$HOOK_METHOD" = "susfs" ]; then
             VARIANT="SusFS"
           else
@@ -386,7 +469,6 @@ jobs:
           KBUILD_BUILD_TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S %Z")
           RELEASE="v${BUILD_DATE}"
           
-          # --- PERUBAHAN NAMA FILE ZIP LEBIH RAPI ---
           AK3_ZIP_NAME="AK3-${KERNEL_NAME}-${RELEASE}-${BASE_LINUX_VERSION}-${VARIANT}.zip"
           
           echo "KERNEL_NAME=$KERNEL_NAME" >> $GITHUB_ENV
@@ -408,7 +490,6 @@ jobs:
           echo "🔽 Cloning anykernel from $ANYKERNEL_REPO"
           git clone -q --depth=1 $ANYKERNEL_REPO -b $ANYKERNEL_BRANCH anykernel
           
-          # --- PERUBAHAN: GUNAKAN VERSI LENGKAP UNTUK KERNEL STRING ---
           KERNEL_STRING="${{ env.LINUX_VERSION }}"
           sed -i "s|kernel.string=.*|kernel.string=$KERNEL_STRING|g" anykernel/anykernel.sh
 
