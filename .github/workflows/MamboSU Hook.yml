@@ -85,7 +85,7 @@ jobs:
           git remote add rama https://github.com/ramabondanp/android_kernel_common-5.10.git
           git fetch -j12 rama
           git checkout -b update-android12-5.10-staging rama/android12-5.10-staging
-          # Setup KernelSU-KowSU
+          # Setup KernelSU
          
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
@@ -128,7 +128,7 @@ jobs:
             fi
           done
           echo "✅ Existing KernelSU drivers removed"
-          echo "➡️ Menambahkan KernelSU-Next"
+          echo "➡️ Menambahkan KernelSU-Rsuntk"
           curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
           echo "✅ KernelSU added"
           
