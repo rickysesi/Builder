@@ -405,7 +405,6 @@ jobs:
         run: |
           echo "Applying fixes for Kingfinik98 kernel source..."
 
-
       - name: Fix Stack Protector
         working-directory: gki/common
         run: |
@@ -427,6 +426,15 @@ jobs:
         run: |
           echo "🧹 [Clean-Up] Deleting check_defconfig"
           sed -i 's/check_defconfig//' gki/common/build.config.gki
+
+      - name: Fix SUSFS Uname Symbol Error
+        working-directory: gki/common
+        run: |
+          echo "🛠️ Applying fix for undefined SUSFS symbols..."
+          # Disable the SUSFS Uname handling block in supercalls.c to use standard kernel spoofing
+          # This fixes the linker error caused by missing functions in the current SUSFS patch
+          sed -i 's/#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME/#if 0 \/\* CONFIG_KSU_SUSFS_SPOOF_UNAME Disabled to fix build \*\//' drivers/kernelsu/supercalls.c
+          echo "✅ SUSFS symbol fix applied."
 
       - name: Set version
         working-directory: gki/common
