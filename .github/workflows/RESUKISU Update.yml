@@ -279,8 +279,8 @@ jobs:
           mkdir -p prebuilts-master/clang/host/linux-x86/$CLANG_VER
           cd prebuilts-master/clang/host/linux-x86
           curl -L "${CLANG_URL}" | tar -xz -C $CLANG_VER
-          rm -rf clang-r536225
-          ln -sf $CLANG_VER clang-r536225
+          rm -rf clang-r563880b
+          ln -sf $CLANG_VER clang-r563880b
 
       - name: Commit changes
         working-directory: gki/common
