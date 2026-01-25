@@ -1,5 +1,5 @@
-name: BoltX  RESUKISU Update
-# new Branch built-input-fix
+name: BoltX Kernel RESUKISU
+# new Branch builtin
 on:
   workflow_dispatch:
     inputs:
@@ -118,7 +118,7 @@ jobs:
         run: |
           cd gki/common
           echo "[6/12] Setup ReSukiSU & SUSFS"
-          curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/refs/heads/built-input-fix/kernel/setup.sh" | bash -s built-input-fix
+          curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -s builtin
           git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
           rm -rf sus/.git
           susfs=sus/kernel_patches
