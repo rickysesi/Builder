@@ -1,4 +1,4 @@
-name: BoltX Kernel RESUKISU
+name: BoltX  RESUKISU Update
 # new Branch built-input-fix
 on:
   workflow_dispatch:
