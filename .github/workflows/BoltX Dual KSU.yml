@@ -1,4 +1,4 @@
-name: BoltX Dual Manager Support
+name: BoltX Dual KSU Support
 
 on:
   workflow_dispatch:
