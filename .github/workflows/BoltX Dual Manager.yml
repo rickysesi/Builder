@@ -1,4 +1,4 @@
-name: BoltX Dual Manager Support
+name: BoltX With WILDKSU - Dual Manager Support
 
 on:
   workflow_dispatch:
@@ -158,16 +158,22 @@ jobs:
             echo "✅ Kprobes setup Done"
           fi
 
-      # --- PATCH DUAL MANAGER SUPPORT ---
-      - name: Patch Dual Manager Support (WildKSU + KernelSU Next)
+      # --- PATCH KERNELSU NEXT MANAGER COMPATIBILITY ---
+      - name: Patch KernelSU Next Manager Compatibility
         working-directory: gki/common/drivers/kernelsu
         run: |
-          echo "🔄 [Patch] Applying Dual Manager Support (WildKSU & KernelSU Next)..."
-          # Mengunduh file patch dari repositori KernelSU-Next untuk mendukung Manager KernelSU Next
-          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/apk_sign.c" -o apk_sign.c
-          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/apk_sign.h" -o apk_sign.h
-          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/manager.h" -o manager.h
-          echo "✅ [Patch] Dual Manager Support berhasil diterapkan. Kernel sekarang support WildKSU & KernelSU Next Manager."
+          echo "🔄 [Patch] Applying KernelSU Next Manager compatibility..."
+
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/apk_sign.c \
+            -o apk_sign.c
+
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/apk_sign.h \
+            -o apk_sign.h
+
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/manager.h \
+            -o manager.h
+
+          echo "✅ [Patch] KernelSU Next Manager compatibility applied."
       # -------------------------------------------------
 
       - name: Apply common fixes
@@ -296,7 +302,7 @@ jobs:
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
 
-          # --- PERUBAHAN INPUT NAME---
+          # --- PERUBAHAN UTAMA: MEMBANGUN VERSI SESUAI CONTOH ---
           SUFFIX=""
           if [ -n "$KERNEL_NAME_INPUT" ]; then
             SUFFIX="-$KERNEL_NAME_INPUT"
@@ -429,8 +435,7 @@ jobs:
           📛 *KernelSU*: ${{ env.KSU }}
           ඞ *SuSFS*: ${{ env.SUSFS_VERSION }}
           🔰 *Compiler*: ${{ env.COMPILER_STRING }}
-          🔗 *Hook Method*: ${{ env.HOOK_METHOD }}
-          🤝 *Dual Manager*: WildKSU + KernelSU Next"
+          🔗 *Hook Method*: ${{ env.HOOK_METHOD }}"
           gh release create "$RELEASE_TAG" "${{ env.AK3_ZIP_NAME }}" \
             --title "$RELEASE_TAG" \
             --notes "$RELEASE_NOTES" \
