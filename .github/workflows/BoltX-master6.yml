@@ -175,7 +175,7 @@ jobs:
             for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
               [ -d $KSU_PATH ] && rm -rf $KSU_PATH
             done
-            curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
+            curl -LSs "https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
             sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
             
             if [ "$HOOK_METHOD" = "susfs" ]; then
