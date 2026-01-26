@@ -124,7 +124,7 @@ jobs:
         run: |
           sed -i '2d' gki/common/build.config.gki
 
-      - name: Setup KernelSU-Next & Hook Method
+      - name: Setup WildKSU & Hook Method
         working-directory: gki/common
         run: |
           echo "🧩 Setup Wild_KSU dan Hook Method"
@@ -144,54 +144,32 @@ jobs:
           sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
           echo "✅ Kbuild patched."
           
-          # --- 1. DOWNLOAD KERNELSU NEXT (BASE) ---
-          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/dev-susfs/kernel/apk_sign.c \
+          # --- DOWNLOAD FILES (BASE + MAMBOSU) ---
+          # 1. Download kernel headers and C files
+          # Using RapliVx's repo ensures manager_sign.h has the Mambo definitions
+          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.c \
             -o apk_sign.c
-          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/dev-susfs/kernel/apk_sign.h \
+          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.h \
             -o apk_sign.h
-          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/manager.h \
+          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/manager.h \
             -o manager.h
-          
-          # --- 2. DOWNLOAD MAMBOSU SUPPORT (Including manager_sign.h) ---
-          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.c \
-            -o apk_sign.c
-          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.h \
-            -o apk_sign.h
-          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/manager.h \
-            -o manager.h
-          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/ksuinit.c \
+          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/ksuinit.c \
             -o ksuinit.c
+          
+          # 2. Download manager_sign.h (Contains EXPECTED_HASH_MAMBO)
           curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/manager_sign.h \
             -o manager_sign.h
 
 
-          # --- 3. MERGE STRATEGY (DUAL MANAGER CHECK) ---
-          echo "🔗 Merging KernelSU Next & MamboSU Manager Support..."
+          # --- NATIVE INJECTION (APK_SIGN.C) ---
+          echo "🔗 Injecting MamboSU into apk_sign.c (Native Way)..."
+          
+          # Inject the MamboSU entry into the static array in apk_sign.c
+          # We insert it AFTER the line containing EXPECTED_SIZE_KOWX712
+          # This matches the structure shown in the user's diff
+          sed -i '/EXPECTED_SIZE_KOWX712/a\        { EXPECTED_SIZE_MAMBO, EXPECTED_HASH_MAMBO }, // MamboSU' apk_sign.c
 
-          # Extract MamboSU SHA256 hash from manager_sign.h
-          MAMBO_HASH=$(grep -oE '[a-f0-9]{64}' manager_sign.h | head -n 1)
-
-          # Safety guard
-          [ -z "$MAMBO_HASH" ] && echo "❌ MamboSU hash not found" && exit 1
-
-          # Append Mambo Hash Check Logic to manager.h
-          cat >> manager.h <<EOF
-
-          // --- MAMBOSU DUAL SUPPORT ---
-          #define MAMBOSU_MANAGER_HASH "$MAMBO_HASH"
-
-          static inline bool ksu_is_manager_mambo_valid(const char *hash)
-          {
-              return memcmp(hash, MAMBOSU_MANAGER_HASH, SHA256_DIGEST_SIZE) == 0;
-          }
-          // ------------------------------
-          EOF
-
-          # --- CRITICAL FIX: Patch HASH CHECK function (memcmp) ---
-          # Insert an OR (||) check into the main memcmp validation line
-          sed -i 's/memcmp(hash, manager_hash, SHA256_DIGEST_SIZE) == 0/memcmp(hash, manager_hash, SHA256_DIGEST_SIZE) == 0 || ksu_is_manager_mambo_valid(hash)/g' manager.h
-
-          echo "✅ [Patch] KernelSU Next & MamboSU signatures merged."
+          echo "✅ [Patch] MamboSU Native injection completed."
 
           # --- FIXED ERROR IMPLICIT DECLARATION ---
           # Added missing appid function for WildKSU (allowlist.c) Compatible
@@ -473,7 +451,7 @@ jobs:
           RELEASE_NOTES="🐧 *Linux Version*: ${{ env.LINUX_VERSION }}
           📅 *Build Date*: ${{ env.KBUILD_BUILD_TIMESTAMP }}
           📛 *KernelSU*: ${{ env.KSU }}
-          🤝 *Manager Support*: KernelSU Next + MamboSU
+          🤝 *Manager Support*: KernelSU Next + MamboSU (Native)
           ඞ *SuSFS*: ${{ env.SUSFS_VERSION }}
           🔰 *Compiler*: ${{ env.COMPILER_STRING }}
           🔗 *Hook Method*: ${{ env.HOOK_METHOD }}"
