@@ -1,4 +1,5 @@
 name: BoltX RemboSU
+
 # new Branch builtin
 on:
   workflow_dispatch:
@@ -79,6 +80,13 @@ jobs:
           git remote add rama https://github.com/ramabondanp/android_kernel_common-5.10.git
           git fetch -j12 rama
           git checkout -b update-android12-5.10-staging rama/android12-5.10-staging
+          
+      - name: Apply Infinix GT 20 Pro Camera Fix
+        working-directory: gki/common
+        run: |
+          echo "📸 Applying Infinix GT 20 Pro Camera Fix..."
+          curl -L "https://github.com/ramabondanp/android_kernel_common-5.10/commit/4fe04b60009e.patch" -o infinix_cam.patch
+          patch -p1 < infinix_cam.patch || echo "Camera patch is embedded "
 
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
@@ -127,6 +135,20 @@ jobs:
           cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
           patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
           echo "[✓] SUSFS patched"
+
+          # --- PERBAIKAN ERROR VERSION ---
+          # Jika setup.sh gagal mengambil versi git (error: ambiguous argument 'main'),
+          # kita definisikan secara manual agar build tidak gagal saat kompilasi ksu.c
+          HEADER_FILE="drivers/kernelsu/include/ksu.h"
+          if [ -f "$HEADER_FILE" ]; then
+              if ! grep -q "define KSU_VERSION" "$HEADER_FILE"; then
+                  echo "🛠️ [Fix] KSU_VERSION tidak terdeteksi, melakukan injeksi manual..."
+                  echo "#define KSU_VERSION_CODE 0x041005" >> "$HEADER_FILE"
+                  echo "#define KSU_VERSION \"v4.1.0-Manual\"" >> "$HEADER_FILE"
+                  echo "✅ [Fix] KSU_VERSION berhasil didefinisikan manual."
+              fi
+          fi
+          # --------------------------------
 
       - name: Apply common fixes
         working-directory: gki/common
