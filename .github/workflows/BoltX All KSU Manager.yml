@@ -147,13 +147,13 @@ jobs:
           # --- DOWNLOAD FILES (BASE + MAMBOSU) ---
           # 1. Download kernel headers and C files
           # Using RapliVx's repo ensures manager_sign.h has the Mambo definitions
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.c \
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.c \
             -o apk_sign.c
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.h \
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.h \
             -o apk_sign.h
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/manager.h \
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/manager.h \
             -o manager.h
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/ksuinit.c \
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/ksuinit.c \
             -o ksuinit.c
           
           # 2. Download manager_sign.h (Contains EXPECTED_HASH_MAMBO)
@@ -177,7 +177,9 @@ jobs:
           echo "// Fix for WildKSU allowlist.c compatibility (appid -> uid)" >> manager.h
           echo "static inline bool ksu_is_manager_appid_valid(void) { return ksu_is_manager_uid_valid(); }" >> manager.h
           echo "static inline uid_t ksu_get_manager_appid(void) { return ksu_get_manager_uid(); }" >> manager.h
-
+          # Apply MamboSU patch 
+          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/gki-builder/15ddb8c469eab27491d5bb0f8f66b7fe2c15d0d7/kernel-patches/ksu/rksu-add-mambosu-manager-support.patch" -o /tmp/rksu_manager.patch
+            cd KernelSU && patch -p1 < /tmp/rksu_manager.patch && cd ..
           # -------------------------------------------------
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           if [ "$HOOK_METHOD" = "susfs" ]; then
@@ -451,7 +453,7 @@ jobs:
           RELEASE_NOTES="🐧 *Linux Version*: ${{ env.LINUX_VERSION }}
           📅 *Build Date*: ${{ env.KBUILD_BUILD_TIMESTAMP }}
           📛 *KernelSU*: ${{ env.KSU }}
-          🤝 *Manager Support*: MamboSU (Native)
+          🤝 *Manager Support*: MamboSU 
           ඞ *SuSFS*: ${{ env.SUSFS_VERSION }}
           🔰 *Compiler*: ${{ env.COMPILER_STRING }}
           🔗 *Hook Method*: ${{ env.HOOK_METHOD }}"
