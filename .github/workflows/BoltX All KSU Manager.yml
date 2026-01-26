@@ -451,7 +451,7 @@ jobs:
           RELEASE_NOTES="🐧 *Linux Version*: ${{ env.LINUX_VERSION }}
           📅 *Build Date*: ${{ env.KBUILD_BUILD_TIMESTAMP }}
           📛 *KernelSU*: ${{ env.KSU }}
-          🤝 *Manager Support*: KernelSU Next + MamboSU (Native)
+          🤝 *Manager Support*: MamboSU (Native)
           ඞ *SuSFS*: ${{ env.SUSFS_VERSION }}
           🔰 *Compiler*: ${{ env.COMPILER_STRING }}
           🔗 *Hook Method*: ${{ env.HOOK_METHOD }}"
