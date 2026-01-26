@@ -1,4 +1,4 @@
-name: BoltX  Dual Manager Support
+name: BoltX Dual Manager Support
 
 on:
   workflow_dispatch:
@@ -163,6 +163,7 @@ jobs:
           # -----------------------------------------------
 
           echo "✅ [Patch] KernelSU Next Manager compatibility applied with AppID Fix."
+          # -------------------------------------------------
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           if [ "$HOOK_METHOD" = "susfs" ]; then
             git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
