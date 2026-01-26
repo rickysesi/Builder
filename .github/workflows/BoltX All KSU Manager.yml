@@ -153,12 +153,14 @@ jobs:
             -o manager.h
           
           # --- 2. DOWNLOAD MAMBOSU SUPPORT ---
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/master/kernel/apk_sign.c \
-            -o apk_sign_mambo.c.bak
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/master/kernel/apk_sign.h \
-            -o apk_sign_mambo.h.bak
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/master/kernel/manager.h \
-            -o manager_mambo.h.bak
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.c \
+            -o apk_sign.c
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.h \
+            -o apk_sign.h
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/manager.h \
+            -o manager.h
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/ksuinit.c \
+            -o ksuinit.c
           curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/manager_sign.h \
             -o manager_sign.h
 
