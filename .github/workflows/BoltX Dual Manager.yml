@@ -157,20 +157,16 @@ jobs:
             echo "➡️ Kprobes Hook"
             echo "✅ Kprobes setup Done"
           fi
-
-      # --- PATCH KERNELSU NEXT MANAGER COMPATIBILITY (FIXED) ---
-      - name: Patch KernelSU Next Manager Compatibility
-        working-directory: gki/common/drivers/kernelsu
-        run: |
           echo "🔄 [Patch] Applying KernelSU Next Manager compatibility..."
 
-          # Download file asli dari KernelSU-Next
-          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/apk_sign.c \
+          # Menggunakan branch dev-susfs untuk apk_sign
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/dev-susfs/kernel/apk_sign.c \
             -o apk_sign.c
 
-          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/apk_sign.h \
+          curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/dev-susfs/kernel/apk_sign.h \
             -o apk_sign.h
 
+          # Menggunakan branch stable untuk manager.h
           curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/manager.h \
             -o manager.h
 
