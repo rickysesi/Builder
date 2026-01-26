@@ -164,24 +164,25 @@ jobs:
           curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/manager_sign.h \
             -o manager_sign.h
 
+
           # --- 3. MERGE STRATEGY (DUAL MANAGER CHECK) ---
           echo "🔗 Merging KernelSU Next & MamboSU Manager Support..."
-          
-          # Extract MamboSU Hash from manager_sign.h or manager.h
-          # We define a manual check function to avoid parsing errors
-          MAMBO_HASH=$(grep -o '"[^"]*"' manager_sign.h | head -n 1 | tr -d '"')
-          
-          # Append Mambo Hash Check Logic to manager.h
+
+          # Extract MamboSU SHA256 hash (FIXED)
+          MAMBO_HASH=$(grep -oE '[a-f0-9]{64}' manager_sign.h | head -n 1)
+
+          # Safety guard (tidak mengubah flow)
+          [ -z "$MAMBO_HASH" ] && echo "❌ MamboSU hash not found" && exit 1
+
+          # Append Mambo Hash Check Logic to manager.h (FIXED, no include)
           cat >> manager.h <<EOF
-          
+
           // --- MAMBOSU DUAL SUPPORT ---
-          #include "manager_sign.h"
-          static inline bool ksu_is_manager_mambo_valid() {
-              // Check against MamboSU hash if available
-              if (sizeof("$MAMBO_HASH") > 2) {
-                   return memcmp(manager_hash, "$MAMBO_HASH", SHA256_DIGEST_SIZE) == 0;
-              }
-              return false;
+          #define MAMBOSU_MANAGER_HASH "$MAMBO_HASH"
+
+          static inline bool ksu_is_manager_mambo_valid(void)
+          {
+              return memcmp(manager_hash, MAMBOSU_MANAGER_HASH, SHA256_DIGEST_SIZE) == 0;
           }
           // ------------------------------
           EOF
@@ -189,16 +190,16 @@ jobs:
           # Modify the main validation function to use OR (||) logic
           # This ensures BOTH KernelSU Next AND MamboSU are accepted
           sed -i 's/return ksu_is_manager_appid_valid();/return ksu_is_manager_appid_valid() || ksu_is_manager_mambo_valid();/' manager.h
-          
+
           echo "✅ [Patch] KernelSU Next & MamboSU signatures merged."
+
 
           # --- FIXED ERROR IMPLICIT DECLARATION ---
           # Added missing appid function for WildKSU (allowlist.c) Compatible
           echo "" >> manager.h
           echo "// Fix for WildKSU allowlist.c compatibility (appid -> uid)" >> manager.h
-          echo "static inline bool ksu_is_manager_appid_valid() { return ksu_is_manager_uid_valid(); }" >> manager.h
-          echo "static inline uid_t ksu_get_manager_appid() { return ksu_get_manager_uid(); }" >> manager.h
-          # -----------------------------------------------
+          echo "static inline bool ksu_is_manager_appid_valid(void) { return ksu_is_manager_uid_valid(); }" >> manager.h
+          echo "static inline uid_t ksu_get_manager_appid(void) { return ksu_get_manager_uid(); }" >> manager.h
 
           # -------------------------------------------------
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
