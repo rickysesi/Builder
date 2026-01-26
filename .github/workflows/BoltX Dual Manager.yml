@@ -158,12 +158,13 @@ jobs:
             echo "✅ Kprobes setup Done"
           fi
 
-      # --- PATCH KERNELSU NEXT MANAGER COMPATIBILITY ---
+      # --- PATCH KERNELSU NEXT MANAGER COMPATIBILITY (FIXED) ---
       - name: Patch KernelSU Next Manager Compatibility
         working-directory: gki/common/drivers/kernelsu
         run: |
           echo "🔄 [Patch] Applying KernelSU Next Manager compatibility..."
 
+          # Download file asli dari KernelSU-Next
           curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/apk_sign.c \
             -o apk_sign.c
 
@@ -173,7 +174,15 @@ jobs:
           curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/manager.h \
             -o manager.h
 
-          echo "✅ [Patch] KernelSU Next Manager compatibility applied."
+          # --- PERBAIKAN ERROR IMPLICIT DECLARATION ---
+          # Menambahkan fungsi appid yang hilang agar WildKSU (allowlist.c) kompatibel
+          echo "" >> manager.h
+          echo "// Fix for WildKSU allowlist.c compatibility (appid -> uid)" >> manager.h
+          echo "static inline bool ksu_is_manager_appid_valid() { return ksu_is_manager_uid_valid(); }" >> manager.h
+          echo "static inline uid_t ksu_get_manager_appid() { return ksu_get_manager_uid(); }" >> manager.h
+          # -----------------------------------------------
+
+          echo "✅ [Patch] KernelSU Next Manager compatibility applied with AppID Fix."
       # -------------------------------------------------
 
       - name: Apply common fixes
