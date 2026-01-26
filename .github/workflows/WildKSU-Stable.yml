@@ -1,4 +1,4 @@
-name: BoltX With WILDKSU-v2
+name: BoltX With WILDKSU-New Branch
 
 on:
   workflow_dispatch:
@@ -139,7 +139,7 @@ jobs:
           done
           echo "✅ Existing KernelSU drivers removed"
           echo "➡️ add Wild_KSU"
-          curl -LSs "https://raw.githubusercontent.com/WildKernels/Wild_KSU/wild/kernel/setup.sh" | bash -s wild
+          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Wild_KSU/refs/heads/stable/kernel/setup.sh" | bash -s stable
           echo "✅ Wild_KSU added"
           sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
           echo "✅ Kbuild patched."
