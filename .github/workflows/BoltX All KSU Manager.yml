@@ -111,7 +111,7 @@ jobs:
         working-directory: gki/common
         run: |
           echo "🚀 [MediaTek] Applying performance tuning via defconfig (HZ=500)."
-          echo "✅ [MediaTek] Tuning will be applied in the 'Inject All Kernel Configs' step."
+          echo "✅ [MediaTek] Tuning will be applied in 'Inject All Kernel Configs' step."
 
       - name: Apply Universal Configuration
         if: github.event.inputs.performance_patch == 'Universal'
@@ -152,7 +152,7 @@ jobs:
           curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/manager.h \
             -o manager.h
           
-          # --- 2. DOWNLOAD MAMBOSU SUPPORT ---
+          # --- 2. DOWNLOAD MAMBOSU SUPPORT (Including manager_sign.h) ---
           curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.c \
             -o apk_sign.c
           curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/apk_sign.h \
@@ -168,31 +168,30 @@ jobs:
           # --- 3. MERGE STRATEGY (DUAL MANAGER CHECK) ---
           echo "🔗 Merging KernelSU Next & MamboSU Manager Support..."
 
-          # Extract MamboSU SHA256 hash (FIXED)
+          # Extract MamboSU SHA256 hash from manager_sign.h
           MAMBO_HASH=$(grep -oE '[a-f0-9]{64}' manager_sign.h | head -n 1)
 
-          # Safety guard (tidak mengubah flow)
+          # Safety guard
           [ -z "$MAMBO_HASH" ] && echo "❌ MamboSU hash not found" && exit 1
 
-          # Append Mambo Hash Check Logic to manager.h (FIXED, no include)
+          # Append Mambo Hash Check Logic to manager.h
           cat >> manager.h <<EOF
 
           // --- MAMBOSU DUAL SUPPORT ---
           #define MAMBOSU_MANAGER_HASH "$MAMBO_HASH"
 
-          static inline bool ksu_is_manager_mambo_valid(void)
+          static inline bool ksu_is_manager_mambo_valid(const char *hash)
           {
-              return memcmp(manager_hash, MAMBOSU_MANAGER_HASH, SHA256_DIGEST_SIZE) == 0;
+              return memcmp(hash, MAMBOSU_MANAGER_HASH, SHA256_DIGEST_SIZE) == 0;
           }
           // ------------------------------
           EOF
 
-          # Modify the main validation function to use OR (||) logic
-          # This ensures BOTH KernelSU Next AND MamboSU are accepted
-          sed -i 's/return ksu_is_manager_appid_valid();/return ksu_is_manager_appid_valid() || ksu_is_manager_mambo_valid();/' manager.h
+          # --- CRITICAL FIX: Patch HASH CHECK function (memcmp) ---
+          # Insert an OR (||) check into the main memcmp validation line
+          sed -i 's/memcmp(hash, manager_hash, SHA256_DIGEST_SIZE) == 0/memcmp(hash, manager_hash, SHA256_DIGEST_SIZE) == 0 || ksu_is_manager_mambo_valid(hash)/g' manager.h
 
           echo "✅ [Patch] KernelSU Next & MamboSU signatures merged."
-
 
           # --- FIXED ERROR IMPLICIT DECLARATION ---
           # Added missing appid function for WildKSU (allowlist.c) Compatible
