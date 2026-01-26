@@ -143,22 +143,6 @@ jobs:
           echo "✅ Wild_KSU added"
           sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
           echo "✅ Kbuild patched."
-          HOOK_METHOD="${{ github.event.inputs.hook_method }}"
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-            git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
-            rm -rf sus/.git
-            susfs=sus/kernel_patches
-            cp -r $susfs/fs .
-            cp -r $susfs/include .
-            cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
-            patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
-            echo "[✓] SUSFS patched"
-          else
-            echo "➡️ Kprobes Hook"
-            echo "✅ Kprobes setup Done"
-          fi
-          echo "🔄 [Patch] Applying KernelSU Next Manager compatibility..."
-
           # Menggunakan branch dev-susfs untuk apk_sign
           curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/dev-susfs/kernel/apk_sign.c \
             -o apk_sign.c
@@ -180,6 +164,20 @@ jobs:
 
           echo "✅ [Patch] KernelSU Next Manager compatibility applied with AppID Fix."
       # -------------------------------------------------
+          HOOK_METHOD="${{ github.event.inputs.hook_method }}"
+          if [ "$HOOK_METHOD" = "susfs" ]; then
+            git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
+            rm -rf sus/.git
+            susfs=sus/kernel_patches
+            cp -r $susfs/fs .
+            cp -r $susfs/include .
+            cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
+            patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
+            echo "[✓] SUSFS patched"
+          else
+            echo "➡️ Kprobes Hook"
+            echo "✅ Kprobes setup Done"
+          fi
 
       - name: Apply common fixes
         working-directory: gki/common
