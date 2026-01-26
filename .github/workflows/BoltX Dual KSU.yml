@@ -154,8 +154,8 @@ jobs:
           curl -LSs https://raw.githubusercontent.com/Kingfinik98/KernelSU-Next/refs/heads/stable/kernel/manager.h \
             -o manager.h
 
-          # --- PERBAIKAN ERROR IMPLICIT DECLARATION ---
-          # Menambahkan fungsi appid yang hilang agar WildKSU (allowlist.c) kompatibel
+          # --- FIXED ERROR IMPLICIT DECLARATION ---
+          # Added missing appid function for WildKSU (allowlist.c) Compatible
           echo "" >> manager.h
           echo "// Fix for WildKSU allowlist.c compatibility (appid -> uid)" >> manager.h
           echo "static inline bool ksu_is_manager_appid_valid() { return ksu_is_manager_uid_valid(); }" >> manager.h
