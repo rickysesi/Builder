@@ -1,4 +1,4 @@
-name: BoltX ResukiSU MamboSU2
+name: BoltX RemboSU
 # new Branch builtin
 on:
   workflow_dispatch:
