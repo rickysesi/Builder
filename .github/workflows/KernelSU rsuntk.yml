@@ -134,7 +134,7 @@ jobs:
       - name: Setup KernelSU Rsuntkt & Hook Method
         working-directory: gki/common
         run: |
-          echo "🧩 Setup Wild_KSU dan Hook Method"
+          echo "🧩 Setup Rsuntk Hook Method"
           for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
             if [ -d $KSU_PATH ]; then
               echo "KernelSU driver found in $KSU_PATH, Removing..."
@@ -148,7 +148,8 @@ jobs:
           echo "➡️ add Rsuntk KernelsU"
           curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-rksu-master
           echo "✅ Wild_KSU added"
-          sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
+          # PERBAIKAN: Path disesuaikan ke drivers/staging/kernelsu/Kbuild
+          sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/staging/kernelsu/Kbuild
           echo "✅ Kbuild patched."
           # Using dev-susfs branch for apk_sign
           curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/master/kernel/apk_sign.c \
@@ -161,8 +162,8 @@ jobs:
           curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/master/kernel/manager.h \
             -o manager.h
             
-          # Using stable branch for manager_sign.h
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/manager_sign.h
+          # Using stable branch for manager_sign.h (PERBAIKAN SYNTAX: Menambahkan backslash)
+          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/manager_sign.h \
             -o manager_sign.h
           
           # --- FIXED ERROR IMPLICIT DECLARATION ---
