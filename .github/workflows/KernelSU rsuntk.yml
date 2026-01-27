@@ -200,7 +200,7 @@ jobs:
           # 1. Patch Source: Update supercalls.c logic and implementations
           SOURCE="drivers/kernelsu/supercalls.c"
           if [ -f "$SOURCE" ]; then
-            # Ganti pemanggilan identifier lama ke baru
+            # Change the old identifier call to the new one
             sed -i 's/CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS/CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS/g' "$SOURCE"
             sed -i 's/susfs_set_hide_sus_mnts_for_all_procs/susfs_set_hide_sus_mnts_for_non_su_procs/g' "$SOURCE"
             
@@ -235,10 +235,10 @@ jobs:
             echo "✅ Source patched."
           fi
 
-          # 2. Patch Header: HANYA tambahkan prototipe fungsi jika belum ada (Hindari redefinisi struct)
+          # 2. Patch Header: ONLY add function prototypes if they don't already exist (Avoid struct redefinition)
           HEADER="include/linux/susfs.h"
           if [ -f "$HEADER" ]; then
-            # Cek apakah prototipe fungsi sudah ada
+            # Check if the function prototype exists
             if ! grep -q "susfs_set_hide_sus_mnts_for_non_su_procs" "$HEADER"; then
                cat >> "$HEADER" << 'EOF'
           
@@ -298,7 +298,7 @@ jobs:
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
           cat >> $DEFCONFIG <<EOF
           # ===============================================
-          # Konfigurasi KSU NEXT (Base)
+          # Konfigurasi KSU (Base)
           CONFIG_KSU=y
           CONFIG_KPM=y
           CONFIG_KSU_SUSFS_SUS_SU=n
