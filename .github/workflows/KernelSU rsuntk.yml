@@ -305,48 +305,48 @@ jobs:
           EOF
           if [ "$HOOK_METHOD" = "susfs" ]; then
             cat >> $DEFCONFIG <<EOF
-          # --- SUSFS Method (includes Kprobes/Hybrid) ---
-          CONFIG_KSU_SUSFS=y
-          CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_PATH=y
-          CONFIG_KSU_SUSFS_SUS_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
-          CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n
-          CONFIG_KSU_SUSFS_TRY_UMOUNT=y
-          CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
-          CONFIG_KSU_SUSFS_SPOOF_UNAME=y
-          CONFIG_KSU_SUSFS_ENABLE_LOG=y
-          CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
-          CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
-          CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
-          CONFIG_KSU_MANUAL_HOOK=n
-          CONFIG_KSU_HAS_MANUAL_HOOK=n
+            # --- SUSFS Method (includes Kprobes/Hybrid) ---
+            CONFIG_KSU_SUSFS=y
+            CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
+            CONFIG_KSU_SUSFS_SUS_PATH=y
+            CONFIG_KSU_SUSFS_SUS_MOUNT=y
+            CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
+            CONFIG_KSU_SUSFS_SUS_KSTAT=y
+            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
+            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
+            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
+            CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n
+            CONFIG_KSU_SUSFS_TRY_UMOUNT=y
+            CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
+            CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+            CONFIG_KSU_SUSFS_ENABLE_LOG=y
+            CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+            CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+            CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+            CONFIG_KSU_MANUAL_HOOK=n
+            CONFIG_KSU_HAS_MANUAL_HOOK=n
           EOF
           else
             cat >> $DEFCONFIG <<EOF
-          # --- Kprobes Hook Method ---
-          CONFIG_KSU_SUSFS=n
-          CONFIG_KSU_MANUAL_HOOK=n
-          CONFIG_KSU_HAS_MANUAL_HOOK=n
+            # --- Kprobes Hook Method ---
+            CONFIG_KSU_SUSFS=n
+            CONFIG_KSU_MANUAL_HOOK=n
+            CONFIG_KSU_HAS_MANUAL_HOOK=n
           EOF
           fi
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
             cat >> $DEFCONFIG <<EOF
-          # --- MediaTek Performance Tuning ---
-          CONFIG_HZ=500
-          CONFIG_HZ_500=y
+            # --- MediaTek Performance Tuning ---
+            CONFIG_HZ=500
+            CONFIG_HZ_500=y
           EOF
             echo "✅ [MediaTek] Applied HZ=500 config."
           elif [ "$PERFORMANCE_PATCH" = "Universal" ]; then
             cat >> $DEFCONFIG <<EOF
-          # --- Universal Configuration ---
-          CONFIG_HZ_500=y
-          CONFIG_CPU_FREQ=y
-          CONFIG_HIGH_RES_TIMERS=y
+            # --- Universal Configuration ---
+            CONFIG_HZ_500=y
+            CONFIG_CPU_FREQ=y
+            CONFIG_HIGH_RES_TIMERS=y
           EOF
             echo "✅ [Universal] Applied universal configuration."
           fi
