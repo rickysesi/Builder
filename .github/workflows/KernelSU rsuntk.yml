@@ -234,6 +234,10 @@ jobs:
           // Safe SusFS Stubs (IOCTL based)
           #include <linux/fs.h>
           
+          void susfs_try_umount(void) {
+              // Stub: Safe to leave empty for build fix
+          }
+
           void susfs_add_try_umount(void __user **user_info) {
               // Stub: No implementation needed to prevent panic
               (void)user_info;
@@ -255,6 +259,8 @@ jobs:
           #endif
           EOF
                echo "✅ Header prototypes added."
+            else
+               echo "✅ Header already contains prototypes."
             fi
           fi
 
