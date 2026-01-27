@@ -145,7 +145,7 @@ jobs:
             fi
           done
           echo "✅ Existing KernelSU drivers removed"
-          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-rksu-master
+          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/setup.sh" | bash -s susfs-rksu-master
           # Using dev-susfs branch for apk_sign
           curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/master/kernel/apk_sign.c \
             -o apk_sign.c
@@ -311,12 +311,15 @@ jobs:
           if [ "$HOOK_METHOD" = "susfs" ]; then
             cat >> $DEFCONFIG <<EOF
           # --- SUSFS Method (includes Kprobes/Hybrid) ---
+          # PERINGATAN: CONFIG_KSU_SUSFS_SUS_KSTAT & SPOOF_GENERIC Dinonaktifkan
+          # untuk mencegah Kernel Panic karena kurangnya implementasi fungsi
+          # ksu_handle_vfs_fstat dan ksu_init_rc_hook di source supercalls.c.
           CONFIG_KSU_SUSFS=y
           CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
           CONFIG_KSU_SUSFS_SUS_PATH=y
           CONFIG_KSU_SUSFS_SUS_MOUNT=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
-          CONFIG_KSU_SUSFS_SUS_KSTAT=y
+          # CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC is not set
+          # CONFIG_KSU_SUSFS_SUS_KSTAT is not set
           CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
           CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
           CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
