@@ -208,13 +208,14 @@ jobs:
             sed -i 's/CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS/CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS/g' "$SOURCE"
             sed -i 's/susfs_set_hide_sus_mnts_for_all_procs/susfs_set_hide_sus_mnts_for_non_su_procs/g' "$SOURCE"
             
-            # --- PERBAIKAN ERROR UNDEFINED SYMBOL (DARI LOG BUILD) ---
-            # Menambahkan definisi fungsi yang hilang agar linker tidak error
+            # --- PERBAIKAN ERROR UNDEFINED SYMBOL & HEADER ---
+            # Menambahkan definisi fungsi yang hilang.
+            # Menggunakan include <linux/stat.h> karena <linux/kstat.h> tidak ada.
             cat >> "$SOURCE" << 'EOF'
           
           // Missing symbols fix from build log
           #include <linux/fs.h>
-          #include <linux/kstat.h>
+          #include <linux/stat.h>
 
           void __init ksu_init_rc_hook(void) {
               // Stub implementation
@@ -234,7 +235,7 @@ jobs:
               (void)user_info;
           }
           EOF
-            echo "✅ Source patched. Missing symbols stubbed to fix build."
+            echo "✅ Source patched. Missing symbols stubbed and header fixed to linux/stat.h."
           fi
 
           # 2. Patch Header: ONLY add function prototypes if they don't already exist (Avoid struct redefinition)
