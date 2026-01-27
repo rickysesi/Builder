@@ -131,7 +131,7 @@ jobs:
         run: |
           sed -i '2d' gki/common/build.config.gki
 
-      - name: Setup KernelSU-Next & Hook Method
+      - name: Setup KernelSU Rsuntkt & Hook Method
         working-directory: gki/common
         run: |
           echo "🧩 Setup Wild_KSU dan Hook Method"
@@ -146,7 +146,7 @@ jobs:
           done
           echo "✅ Existing KernelSU drivers removed"
           echo "➡️ add Rsuntk KernelsU"
-          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/Wild_KSU/refs/heads/stable/kernel/setup.sh" | bash -s stable
+          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-rksu-master
           echo "✅ Wild_KSU added"
           sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
           echo "✅ Kbuild patched."
