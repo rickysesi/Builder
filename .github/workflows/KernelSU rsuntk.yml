@@ -130,24 +130,8 @@ jobs:
       - name: Tweak build config
         run: |
           sed -i '2d' gki/common/build.config.gki
-
-      - name: Setup KernelSU Rsuntkt & Hook Method
-        working-directory: gki/common
-        run: |
-          echo "🧩 Setup Rsuntk Hook Method"
-          for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
-            if [ -d $KSU_PATH ]; then
-              echo "KernelSU driver found in $KSU_PATH, Removing..."
-              KSU_DIR=$(dirname "$KSU_PATH")
-              [ -f "$KSU_DIR/Kconfig" ] && sed -i '/kernelsu/d' $KSU_DIR/Kconfig
-              [ -f "$KSU_DIR/Makefile" ] && sed -i '/kernelsu/d' $KSU_DIR/Makefile
-              rm -rf $KSU_PATH
-            fi
-          done
-          echo "✅ Existing KernelSU drivers removed"
-          echo "➡️ add Rsuntk KernelsU"
           curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-rksu-master
-          echo "✅ Wild_KSU added"
+          echo "✅ Rsuntk KernelSU added"
           # PERBAIKAN: Path disesuaikan ke drivers/staging/kernelsu/Kbuild
           sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/staging/kernelsu/Kbuild
           echo "✅ Kbuild patched."
