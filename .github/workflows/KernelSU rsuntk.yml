@@ -195,50 +195,54 @@ jobs:
       - name: Fix SUSFS Headers & Sources (Fixed)
         working-directory: gki/common
         run: |
-          echo "🛠️ [Fix] Patching SUSFS logic and fixing undefined symbols..."
+          echo "🛠️ [Fix] Removing broken hooks to fix Kernel Panic..."
 
-          # 1. Patch Source: Update supercalls.c logic (ONLY PROTOTYPES & CALLS, NO DEFINITIONS)
+          # --- STEP 1: HAPUS PANGGILAN BERBAHAYA ---
+          # Fungsi ksu_init_rc_hook dan ksu_handle_vfs_fstat dipanggil oleh patch SusFS
+          # di fs/read_write.c dan fs/stat.c. Namun implementasinya TIDAK ADA di source code
+          # (kecuali stub palsu yang menyebabkan panic).
+          # Solusi: Hapus baris pemanggilan fungsi tersebut langsung dari source kernel.
+          # Ini mematikan fitur SUS_KSTAT tapi mencegah PANIC total.
+          
+          echo "🗑️ Removing ksu_init_rc_hook call from fs/read_write.c..."
+          sed -i '/ksu_init_rc_hook/d' fs/read_write.c
+          
+          echo "🗑️ Removing ksu_handle_vfs_fstat call from fs/stat.c..."
+          sed -i '/ksu_handle_vfs_fstat/d' fs/stat.c
+          
+          echo "✅ Broken hooks removed. Kernel should boot now."
+
+          # --- STEP 2: SUSFS SUPERCALLS & HEADERS (IOCTL ONLY) ---
+          # Kita hanya perlu memperbaiki fungsi SusFS yang dipanggil melalui IOCTL (supercalls.c).
+          # Fungsi ini (susfs_add_try_umount, dll) aman di-stub karena dipanggil via request manager.
+          # Kita TIDAK perlu stub untuk ksu_init_rc_hook lagi karena sudah dihapus di step 1.
+          
           SOURCE="drivers/kernelsu/supercalls.c"
           if [ -f "$SOURCE" ]; then
-            # Inject Prototypes at line 1 to fix implicit declaration error
+            # Inject Prototypes
             sed -i '1i void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);' "$SOURCE"
             sed -i '1i void susfs_add_try_umount(void __user **user_info);' "$SOURCE"
             
-            # Change the old identifier call to the new one
+            # Change CMD identifier
             sed -i 's/CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS/CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS/g' "$SOURCE"
             sed -i 's/susfs_set_hide_sus_mnts_for_all_procs/susfs_set_hide_sus_mnts_for_non_su_procs/g' "$SOURCE"
             
-            # --- PERBAIKAN ERROR UNDEFINED SYMBOL & HEADER ---
-            # Menambahkan definisi fungsi yang hilang.
-            # Menggunakan include <linux/stat.h> karena <linux/kstat.h> tidak ada.
+            # Tambahkan definisi AMAN untuk fungsi SusFS (IOCTL)
+            # HANYA untuk susfs_add_try_umount dan sejenisnya, BUKAN untuk KernelSU core hooks.
             cat >> "$SOURCE" << 'EOF'
           
-          // Missing symbols fix from build log
+          // Safe SusFS Stubs (IOCTL based)
           #include <linux/fs.h>
-          #include <linux/stat.h>
-
-          void __init ksu_init_rc_hook(void) {
-              // Stub implementation
-          }
-
-          bool ksu_handle_vfs_fstat(struct path *path, struct kstat *stat, int request_mask) {
-              // Stub implementation: return false to indicate no hook action
-              return false;
-          }
-
-          void susfs_try_umount(void) {
-              // Stub implementation
-          }
-
+          
           void susfs_add_try_umount(void __user **user_info) {
-              // Stub implementation
+              // Stub: No implementation needed to prevent panic
               (void)user_info;
           }
           EOF
-            echo "✅ Source patched. Missing symbols stubbed and header fixed to linux/stat.h."
+            echo "✅ SusFS supercalls patched (Safe stubs only)."
           fi
 
-          # 2. Patch Header: ONLY add function prototypes if they don't already exist (Avoid struct redefinition)
+          # --- STEP 3: HEADERS ---
           HEADER="include/linux/susfs.h"
           if [ -f "$HEADER" ]; then
             if ! grep -q "susfs_set_hide_sus_mnts_for_non_su_procs" "$HEADER"; then
@@ -251,8 +255,6 @@ jobs:
           #endif
           EOF
                echo "✅ Header prototypes added."
-            else
-               echo "✅ Header already contains prototypes."
             fi
           fi
 
