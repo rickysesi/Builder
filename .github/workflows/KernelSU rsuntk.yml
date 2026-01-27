@@ -192,39 +192,47 @@ jobs:
             echo "✅ Kprobes setup Done"
           fi
 
-      - name: Fix SUSFS Headers & Sources (Final - No Duplicate Symbols)
+      - name: Fix SUSFS Headers & Sources (Fixed)
         working-directory: gki/common
         run: |
-          echo "🛠️ [Fix] Applying SUSFS logic fixes..."
+          echo "🛠️ [Fix] Patching SUSFS logic to match header definitions..."
+          
+          # 1. Patch Source: Update supercalls.c logic (ONLY PROTOTYPES & CALLS, NO DEFINITIONS)
           SOURCE="drivers/kernelsu/supercalls.c"
           if [ -f "$SOURCE" ]; then
-            # 1. Update logic: Change OLD identifier to NEW identifier
+            # Inject Prototypes at line 1 to fix implicit declaration error
+            sed -i '1i void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);' "$SOURCE"
+            sed -i '1i void susfs_add_try_umount(void __user **user_info);' "$SOURCE"
+            
+            # Change the old identifier call to the new one
             sed -i 's/CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS/CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS/g' "$SOURCE"
             sed -i 's/susfs_set_hide_sus_mnts_for_all_procs/susfs_set_hide_sus_mnts_for_non_su_procs/g' "$SOURCE"
             
-            # 2. Add ONLY the missing implementation for 'susfs_add_try_umount'
-            # We DO NOT add 'susfs_set_hide_sus_mnts_for_non_su_procs' here because
-            # fs/susfs.c already provides it. Adding it here causes 'duplicate symbol' error.
-            cat >> "$SOURCE" << 'EOF'
-          
-          // Added to fix compilation errors (SUSFS Logic Implementation)
-          #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-          void susfs_add_try_umount(void __user **user_info) {
-              // Stub implementation to satisfy linker
-              return; 
-          }
-          #endif
-          EOF
-            echo "✅ Source patched (Added missing susfs_add_try_umount)."
+            # --- DIPERBAIKI: Menghapus blok implementasi manual di bawah ini ---
+            # Blok 'cat >> "$SOURCE"' yang berisi 'static DEFINE_SPINLOCK...' dan implementasi fungsi DIHAPUS.
+            # Implementasi fungsi sudah ada di fs/susfs.c (dari SusFS source), jadi kita tidak perlu mendefinisikannya dua kali.
+            # Ini mengatasi error "duplicate symbol".
+            
+            echo "✅ Source patched. Duplicate implementations removed."
           fi
 
-          # 3. Prototypes Injection (Line 1)
-          # Inject ONLY missing prototype for susfs_add_try_umount to fix implicit declaration
-          if grep -q "susfs_add_try_umount" "$SOURCE"; then
-             if ! grep -q "void susfs_add_try_umount" "$SOURCE"; then
-                sed -i '1i void susfs_add_try_umount(void __user **user_info);' "$SOURCE"
-                echo "✅ Prototype added for susfs_add_try_umount."
-             fi
+          # 2. Patch Header: ONLY add function prototypes if they don't already exist (Avoid struct redefinition)
+          HEADER="include/linux/susfs.h"
+          if [ -f "$HEADER" ]; then
+            # Check if the function prototype exists
+            if ! grep -q "susfs_set_hide_sus_mnts_for_non_su_procs" "$HEADER"; then
+               cat >> "$HEADER" << 'EOF'
+          
+          // Added prototypes for SUSFS supercalls
+          #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+          void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);
+          void susfs_add_try_umount(void __user **user_info);
+          #endif
+          EOF
+               echo "✅ Header prototypes added."
+            else
+               echo "✅ Header already contains prototypes."
+            fi
           fi
 
       - name: Apply common fixes
@@ -471,7 +479,7 @@ jobs:
           echo "🔽 Cloning anykernel from $ANYKERNEL_REPO"
           git clone -q --depth=1 $ANYKERNEL_REPO -b $ANYKERNEL_BRANCH anykernel
           
-          # --- CHANGE: USE FULL VERSION FOR KERNEL STRING ---
+          # --- PERUBAHAN: GUNAKAN VERSI LENGKAP UNTUK KERNEL STRING ---
           KERNEL_STRING="${{ env.LINUX_VERSION }}"
           sed -i "s|kernel.string=.*|kernel.string=$KERNEL_STRING|g" anykernel/anykernel.sh
 
