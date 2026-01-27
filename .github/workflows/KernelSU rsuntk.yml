@@ -192,45 +192,26 @@ jobs:
             echo "✅ Kprobes setup Done"
           fi
 
-      - name: Fix SUSFS Headers & Sources
+      - name: Fix SUSFS Headers & Sources (Updated)
         working-directory: gki/common
         run: |
-          echo "🛠️ [Fix] Patching SUSFS headers and sources for compatibility..."
+          echo "🛠️ [Fix] Patching SUSFS logic to match header definitions..."
           
-          # Fix Header: Add missing definitions for NON_SU and ALL_PROCS compatibility
-          HEADER="include/linux/susfs.h"
-          if [ -f "$HEADER" ]; then
-            cat >> "$HEADER" << 'EOF'
-          
-          // Added to fix compilation errors (Non-SU & All Procs Support)
-          #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-          #define CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS 0x2D
-          #define CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS 0x2E
-          
-          struct st_susfs_hide_sus_mnts_for_non_su_procs {
-              bool enabled;
-              int err;
-          };
-          
-          void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);
-          void susfs_set_hide_sus_mnts_for_all_procs(void __user **user_info);
-          void susfs_add_try_umount(void __user **user_info);
-          #endif
-          EOF
-            echo "✅ Header patched."
-          fi
-
-          # Fix Source: Add missing implementations
-          SOURCE="kernel/supercalls.c"
+          # 1. Patch Source: Update supercalls.c logic and implementations
+          SOURCE="drivers/kernelsu/supercalls.c"
           if [ -f "$SOURCE" ]; then
+            # Ganti pemanggilan identifier lama ke baru
+            sed -i 's/CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS/CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS/g' "$SOURCE"
+            sed -i 's/susfs_set_hide_sus_mnts_for_all_procs/susfs_set_hide_sus_mnts_for_non_su_procs/g' "$SOURCE"
+            
+            # Add missing function implementations at the end of the file
             cat >> "$SOURCE" << 'EOF'
           
-          // Added to fix compilation errors
+          // Added to fix compilation errors (SUSFS Logic Implementation)
           #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
           static DEFINE_SPINLOCK(susfs_spin_lock_sus_mount);
           bool susfs_hide_sus_mnts_for_non_su_procs = false;
-          bool susfs_hide_sus_mnts_for_all_procs = false;
-
+          
           void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info) {
               struct st_susfs_hide_sus_mnts_for_non_su_procs info = {0};
               if (copy_from_user(&info, (struct st_susfs_hide_sus_mnts_for_non_su_procs __user*)*user_info, sizeof(info))) {
@@ -244,28 +225,33 @@ jobs:
           out:
               return;
           }
-
-          void susfs_set_hide_sus_mnts_for_all_procs(void __user **user_info) {
-              struct st_susfs_hide_sus_mnts_for_non_su_procs info = {0};
-              if (copy_from_user(&info, (struct st_susfs_hide_sus_mnts_for_non_su_procs __user*)*user_info, sizeof(info))) {
-                  info.err = -EFAULT;
-                  goto out;
-              }
-              spin_lock(&susfs_spin_lock_sus_mount);
-              susfs_hide_sus_mnts_for_all_procs = info.enabled;
-              spin_unlock(&susfs_spin_lock_sus_mount);
-              info.err = 0;
-          out:
-              return;
-          }
-
+          
           void susfs_add_try_umount(void __user **user_info) {
               // Stub implementation to satisfy linker
-              return;
+              return; 
           }
           #endif
           EOF
             echo "✅ Source patched."
+          fi
+
+          # 2. Patch Header: HANYA tambahkan prototipe fungsi jika belum ada (Hindari redefinisi struct)
+          HEADER="include/linux/susfs.h"
+          if [ -f "$HEADER" ]; then
+            # Cek apakah prototipe fungsi sudah ada
+            if ! grep -q "susfs_set_hide_sus_mnts_for_non_su_procs" "$HEADER"; then
+               cat >> "$HEADER" << 'EOF'
+          
+          // Added prototypes for SUSFS supercalls
+          #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+          void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);
+          void susfs_add_try_umount(void __user **user_info);
+          #endif
+          EOF
+               echo "✅ Header prototypes added."
+            else
+               echo "✅ Header already contains prototypes."
+            fi
           fi
 
       - name: Apply common fixes
