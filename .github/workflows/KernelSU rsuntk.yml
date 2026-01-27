@@ -118,7 +118,7 @@ jobs:
         working-directory: gki/common
         run: |
           echo "🚀 [MediaTek] Applying performance tuning via defconfig (HZ=500)."
-          echo "✅ [MediaTek] Tuning will be applied in the 'Inject All Kernel Configs' step."
+          echo "✅ [MediaTek] Tuning will be applied in 'Inject All Kernel Configs' step."
 
       - name: Apply Universal Configuration
         if: github.event.inputs.performance_patch == 'Universal'
@@ -200,6 +200,11 @@ jobs:
           # 1. Patch Source: Update supercalls.c logic and implementations
           SOURCE="drivers/kernelsu/supercalls.c"
           if [ -f "$SOURCE" ]; then
+            # Inject Prototypes at line 1 to fix implicit declaration error
+            # This ensures the compiler knows the function types before they are used (Line 747)
+            sed -i '1i void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);' "$SOURCE"
+            sed -i '1i void susfs_add_try_umount(void __user **user_info);' "$SOURCE"
+            
             # Change the old identifier call to the new one
             sed -i 's/CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS/CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS/g' "$SOURCE"
             sed -i 's/susfs_set_hide_sus_mnts_for_all_procs/susfs_set_hide_sus_mnts_for_non_su_procs/g' "$SOURCE"
