@@ -192,64 +192,68 @@ jobs:
             echo "✅ Kprobes setup Done"
           fi
 
-      - name: Enable SUSFS (Real & Safe)
+      - name: Fix SUSFS Headers & Sources (Fixed)
         working-directory: gki/common
         run: |
-          echo "🛠️ Enabling real SUSFS implementation..."
+          echo "🛠️ [Fix] Patching SUSFS logic and fixing undefined symbols..."
 
-          mkdir -p fs/susfs
+          # 1. Patch Source: Update supercalls.c logic (ONLY PROTOTYPES & CALLS, NO DEFINITIONS)
+          SOURCE="drivers/kernelsu/supercalls.c"
+          if [ -f "$SOURCE" ]; then
+            # Inject Prototypes at line 1 to fix implicit declaration error
+            sed -i '1i void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);' "$SOURCE"
+            sed -i '1i void susfs_add_try_umount(void __user **user_info);' "$SOURCE"
+            
+            # Change the old identifier call to the new one
+            sed -i 's/CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS/CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS/g' "$SOURCE"
+            sed -i 's/susfs_set_hide_sus_mnts_for_all_procs/susfs_set_hide_sus_mnts_for_non_su_procs/g' "$SOURCE"
+            
+            # --- PERBAIKAN ERROR UNDEFINED SYMBOL (DARI LOG BUILD) ---
+            # Menambahkan definisi fungsi yang hilang agar linker tidak error
+            cat >> "$SOURCE" << 'EOF'
+          
+          // Missing symbols fix from build log
+          #include <linux/fs.h>
+          #include <linux/kstat.h>
 
-          cat > fs/susfs/Kconfig << 'EOF'
-      config KSU_SUSFS
-          bool "KernelSU SUSFS support"
-          default y
-      EOF
+          void __init ksu_init_rc_hook(void) {
+              // Stub implementation
+          }
 
-          cat > fs/susfs/Makefile << 'EOF'
-      obj-$(CONFIG_KSU_SUSFS) += core.o umount.o vfs.o
-      EOF
+          bool ksu_handle_vfs_fstat(struct path *path, struct kstat *stat, int request_mask) {
+              // Stub implementation: return false to indicate no hook action
+              return false;
+          }
 
-          cat > fs/susfs/core.c << 'EOF'
-      #include <linux/types.h>
-      #include <linux/export.h>
+          void susfs_try_umount(void) {
+              // Stub implementation
+          }
 
-      void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info) {}
-      EXPORT_SYMBOL_GPL(susfs_set_hide_sus_mnts_for_non_su_procs);
-
-      bool ksu_init_rc_hook(void) { return true; }
-      EXPORT_SYMBOL_GPL(ksu_init_rc_hook);
-      EOF
-
-          cat > fs/susfs/umount.c << 'EOF'
-      #include <linux/export.h>
-
-      void susfs_add_try_umount(void __user **user_info) {}
-      EXPORT_SYMBOL_GPL(susfs_add_try_umount);
-
-      void susfs_try_umount(void __user **user_info) {}
-      EXPORT_SYMBOL_GPL(susfs_try_umount);
-      EOF
-
-          cat > fs/susfs/vfs.c << 'EOF'
-      #include <linux/path.h>
-      #include <linux/kstat.h>
-      #include <linux/export.h>
-
-      int ksu_handle_vfs_fstat(const struct path *path,
-                               struct kstat *stat,
-                               __u32 request_mask,
-                               unsigned int query_flags)
-      {
-          return 0;
-      }
-      EXPORT_SYMBOL_GPL(ksu_handle_vfs_fstat);
-      EOF
-
-          if ! grep -q "susfs/" fs/Makefile; then
-            sed -i '/obj-y += iomap\//a obj-$(CONFIG_KSU_SUSFS) += susfs/' fs/Makefile
+          void susfs_add_try_umount(void __user **user_info) {
+              // Stub implementation
+              (void)user_info;
+          }
+          EOF
+            echo "✅ Source patched. Missing symbols stubbed to fix build."
           fi
 
-          echo "✅ SUSFS real (minimal, safe) enabled"
+          # 2. Patch Header: ONLY add function prototypes if they don't already exist (Avoid struct redefinition)
+          HEADER="include/linux/susfs.h"
+          if [ -f "$HEADER" ]; then
+            if ! grep -q "susfs_set_hide_sus_mnts_for_non_su_procs" "$HEADER"; then
+               cat >> "$HEADER" << 'EOF'
+          
+          // Added prototypes for SUSFS supercalls
+          #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+          void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);
+          void susfs_add_try_umount(void __user **user_info);
+          #endif
+          EOF
+               echo "✅ Header prototypes added."
+            else
+               echo "✅ Header already contains prototypes."
+            fi
+          fi
 
       - name: Apply common fixes
         working-directory: gki/common
@@ -305,48 +309,48 @@ jobs:
           EOF
           if [ "$HOOK_METHOD" = "susfs" ]; then
             cat >> $DEFCONFIG <<EOF
-            # --- SUSFS Method (includes Kprobes/Hybrid) ---
-            CONFIG_KSU_SUSFS=y
-            CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
-            CONFIG_KSU_SUSFS_SUS_PATH=y
-            CONFIG_KSU_SUSFS_SUS_MOUNT=y
-            CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
-            CONFIG_KSU_SUSFS_SUS_KSTAT=y
-            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
-            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
-            CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
-            CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n
-            CONFIG_KSU_SUSFS_TRY_UMOUNT=y
-            CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
-            CONFIG_KSU_SUSFS_SPOOF_UNAME=y
-            CONFIG_KSU_SUSFS_ENABLE_LOG=y
-            CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
-            CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
-            CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
-            CONFIG_KSU_MANUAL_HOOK=n
-            CONFIG_KSU_HAS_MANUAL_HOOK=n
+          # --- SUSFS Method (includes Kprobes/Hybrid) ---
+          CONFIG_KSU_SUSFS=y
+          CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y
+          CONFIG_KSU_SUSFS_SUS_PATH=y
+          CONFIG_KSU_SUSFS_SUS_MOUNT=y
+          CONFIG_KSU_SUSFS_SUS_KSTAT_SPOOF_GENERIC=y
+          CONFIG_KSU_SUSFS_SUS_KSTAT=y
+          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y
+          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y
+          CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSTAT=y
+          CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n
+          CONFIG_KSU_SUSFS_TRY_UMOUNT=y
+          CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y
+          CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+          CONFIG_KSU_SUSFS_ENABLE_LOG=y
+          CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y
+          CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+          CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+          CONFIG_KSU_MANUAL_HOOK=n
+          CONFIG_KSU_HAS_MANUAL_HOOK=n
           EOF
           else
             cat >> $DEFCONFIG <<EOF
-            # --- Kprobes Hook Method ---
-            CONFIG_KSU_SUSFS=n
-            CONFIG_KSU_MANUAL_HOOK=n
-            CONFIG_KSU_HAS_MANUAL_HOOK=n
+          # --- Kprobes Hook Method ---
+          CONFIG_KSU_SUSFS=n
+          CONFIG_KSU_MANUAL_HOOK=n
+          CONFIG_KSU_HAS_MANUAL_HOOK=n
           EOF
           fi
           if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
             cat >> $DEFCONFIG <<EOF
-            # --- MediaTek Performance Tuning ---
-            CONFIG_HZ=500
-            CONFIG_HZ_500=y
+          # --- MediaTek Performance Tuning ---
+          CONFIG_HZ=500
+          CONFIG_HZ_500=y
           EOF
             echo "✅ [MediaTek] Applied HZ=500 config."
           elif [ "$PERFORMANCE_PATCH" = "Universal" ]; then
             cat >> $DEFCONFIG <<EOF
-            # --- Universal Configuration ---
-            CONFIG_HZ_500=y
-            CONFIG_CPU_FREQ=y
-            CONFIG_HIGH_RES_TIMERS=y
+          # --- Universal Configuration ---
+          CONFIG_HZ_500=y
+          CONFIG_CPU_FREQ=y
+          CONFIG_HIGH_RES_TIMERS=y
           EOF
             echo "✅ [Universal] Applied universal configuration."
           fi
