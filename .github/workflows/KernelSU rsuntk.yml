@@ -145,7 +145,7 @@ jobs:
             fi
           done
           echo "✅ Existing KernelSU drivers removed"
-         curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
+          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
           # Apply Manager Support Patch manager MamboSU
           echo "🛠️ Applying MamboSU Manager Support Patch..."
           curl -LSs "https://raw.githubusercontent.com/Kingfinik98/gki-builder/15ddb8c469eab27491d5bb0f8f66b7fe2c15d0d7/kernel-patches/ksu/rksu-add-mambosu-manager-support.patch" -o /tmp/rksu_manager.patch
