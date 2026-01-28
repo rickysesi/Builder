@@ -111,11 +111,11 @@ jobs:
           echo "✅ [Snapdragon] Qualcomm CPUFreq HW performance patch applied."
 
       - name: Apply Universal Performance Tuning
-        if: github.event.inputs.performance_patch == 'MediaTek'
+        if: github.event.inputs.performance_patch == 'Universal'
         working-directory: gki/common
         run: |
-          echo "🚀 [MediaTek] Applying performance tuning via defconfig (HZ=500)."
-          echo "✅ [MediaTek] Tuning will be applied in the 'Inject All Kernel Configs' step."
+          echo "🚀 [Universal] Applying performance tuning via defconfig (HZ=500)."
+          echo "✅ [Universal] Tuning will be applied in the 'Inject All Kernel Configs' step."
 
       - name: Tweak build config
         run: |
@@ -193,7 +193,7 @@ jobs:
           PERFORMANCE_PATCH="${{ github.event.inputs.performance_patch }}"
           cat >> $DEFCONFIG <<EOF
           # ===============================================
-          # Konfigurasi KSU NEXT (Base Kprobes)
+          # Konfigurasi KSU (RKSU FIXED Base)
           CONFIG_KSU=y
           CONFIG_KPM=y
           CONFIG_KSU_SUSFS=n
@@ -204,16 +204,28 @@ jobs:
           CONFIG_KSU_HAS_MANUAL_HOOK=n
           EOF
           
-          if [ "$PERFORMANCE_PATCH" = "Universall" ]; then
+          # --- FIX: Memperbaiki logika agar 500Hz selalu aktif untuk RKSU ---
+          if [ "$PERFORMANCE_PATCH" = "Universal" ]; then
             cat >> $DEFCONFIG <<EOF
-          # --- Universal Performance Tuning ---
+          # --- Universal Performance Tuning (Fixed 500Hz) ---
           CONFIG_HZ=500
           CONFIG_HZ_500=y
           CONFIG_CPU_FREQ=y
           CONFIG_HIGH_RES_TIMERS=y
           EOF
             echo "✅ [Universal] Applied HZ=500 config."
+          elif [ "$PERFORMANCE_PATCH" = "Snapdragon" ]; then
+            cat >> $DEFCONFIG <<EOF
+          # --- Snapdragon Performance Tuning (Fixed 500Hz) ---
+          CONFIG_HZ=500
+          CONFIG_HZ_500=y
+          CONFIG_CPU_FREQ=y
+          CONFIG_HIGH_RES_TIMERS=y
+          EOF
+            echo "✅ [Snapdragon] Applied HZ=500 config."
           fi
+          # --------------------------------------------------------------------
+          
           cat >> $DEFCONFIG <<EOF
           # Add additional tmpfs config setting
           CONFIG_TMPFS_XATTR=y
