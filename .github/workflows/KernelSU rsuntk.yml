@@ -145,30 +145,8 @@ jobs:
             fi
           done
           echo "✅ Existing KernelSU drivers removed"
-          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/susfs-rksu-master/kernel/setup.sh" | bash -s susfs-rksu-master
-          # Using dev-susfs branch for apk_sign
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/master/kernel/apk_sign.c \
-            -o apk_sign.c
-
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/master/kernel/apk_sign.h \
-            -o apk_sign.h
-
-          # Using stable branch for manager.h
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/master/kernel/manager.h \
-            -o manager.h
-            
-          # Using stable branch for manager_sign.h (PERBAIKAN SYNTAX: Menambahkan backslash)
-          curl -LSs https://raw.githubusercontent.com/RapliVx/KernelSU/refs/heads/susfs-rksu-master/kernel/manager_sign.h \
-            -o manager_sign.h
-          
-          # --- FIXED ERROR IMPLICIT DECLARATION ---
-          # Added missing appid function for WildKSU (allowlist.c) Compatible
-          echo "" >> manager.h
-          echo "// Fix for WildKSU allowlist.c compatibility (appid -> uid)" >> manager.h
-          echo "static inline bool ksu_is_manager_appid_valid() { return ksu_is_manager_uid_valid(); }" >> manager.h
-          echo "static inline uid_t ksu_get_manager_appid() { return ksu_get_manager_uid(); }" >> manager.h
-          # -----------------------------------------------
-          # 3. Apply Manager Support Patch manager MamboSU
+         curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
+          # Apply Manager Support Patch manager MamboSU
           echo "🛠️ Applying MamboSU Manager Support Patch..."
           curl -LSs "https://raw.githubusercontent.com/Kingfinik98/gki-builder/15ddb8c469eab27491d5bb0f8f66b7fe2c15d0d7/kernel-patches/ksu/rksu-add-mambosu-manager-support.patch" -o /tmp/rksu_manager.patch
           cd KernelSU
@@ -191,79 +169,7 @@ jobs:
             echo "➡️ Kprobes Hook"
             echo "✅ Kprobes setup Done"
           fi
-
-      - name: Fix SUSFS Headers & Sources (Fixed)
-        working-directory: gki/common
-        run: |
-          echo "🛠️ [Fix] Removing broken hooks to fix Kernel Panic..."
-
-          # --- STEP 1: HAPUS PANGGILAN BERBAHAYA ---
-          # Fungsi ksu_init_rc_hook dan ksu_handle_vfs_fstat dipanggil oleh patch SusFS
-          # di fs/read_write.c dan fs/stat.c. Namun implementasinya TIDAK ADA di source code
-          # (kecuali stub palsu yang menyebabkan panic).
-          # Solusi: Hapus baris pemanggilan fungsi tersebut langsung dari source kernel.
-          # Ini mematikan fitur SUS_KSTAT tapi mencegah PANIC total.
           
-          echo "🗑️ Removing ksu_init_rc_hook call from fs/read_write.c..."
-          sed -i '/ksu_init_rc_hook/d' fs/read_write.c
-          
-          echo "🗑️ Removing ksu_handle_vfs_fstat call from fs/stat.c..."
-          sed -i '/ksu_handle_vfs_fstat/d' fs/stat.c
-          
-          echo "✅ Broken hooks removed. Kernel should boot now."
-
-          # --- STEP 2: SUSFS SUPERCALLS & HEADERS (IOCTL ONLY) ---
-          # Kita hanya perlu memperbaiki fungsi SusFS yang dipanggil melalui IOCTL (supercalls.c).
-          # Fungsi ini (susfs_add_try_umount, dll) aman di-stub karena dipanggil via request manager.
-          # Kita TIDAK perlu stub untuk ksu_init_rc_hook lagi karena sudah dihapus di step 1.
-          
-          SOURCE="drivers/kernelsu/supercalls.c"
-          if [ -f "$SOURCE" ]; then
-            # Inject Prototypes
-            sed -i '1i void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);' "$SOURCE"
-            sed -i '1i void susfs_add_try_umount(void __user **user_info);' "$SOURCE"
-            
-            # Change CMD identifier
-            sed -i 's/CMD_SUSFS_HIDE_SUS_MNTS_FOR_ALL_PROCS/CMD_SUSFS_HIDE_SUS_MNTS_FOR_NON_SU_PROCS/g' "$SOURCE"
-            sed -i 's/susfs_set_hide_sus_mnts_for_all_procs/susfs_set_hide_sus_mnts_for_non_su_procs/g' "$SOURCE"
-            
-            # Tambahkan definisi AMAN untuk fungsi SusFS (IOCTL)
-            # HANYA untuk susfs_add_try_umount dan sejenisnya, BUKAN untuk KernelSU core hooks.
-            cat >> "$SOURCE" << 'EOF'
-          
-          // Safe SusFS Stubs (IOCTL based)
-          #include <linux/fs.h>
-          
-          void susfs_try_umount(void) {
-              // Stub: Safe to leave empty for build fix
-          }
-
-          void susfs_add_try_umount(void __user **user_info) {
-              // Stub: No implementation needed to prevent panic
-              (void)user_info;
-          }
-          EOF
-            echo "✅ SusFS supercalls patched (Safe stubs only)."
-          fi
-
-          # --- STEP 3: HEADERS ---
-          HEADER="include/linux/susfs.h"
-          if [ -f "$HEADER" ]; then
-            if ! grep -q "susfs_set_hide_sus_mnts_for_non_su_procs" "$HEADER"; then
-               cat >> "$HEADER" << 'EOF'
-          
-          // Added prototypes for SUSFS supercalls
-          #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-          void susfs_set_hide_sus_mnts_for_non_su_procs(void __user **user_info);
-          void susfs_add_try_umount(void __user **user_info);
-          #endif
-          EOF
-               echo "✅ Header prototypes added."
-            else
-               echo "✅ Header already contains prototypes."
-            fi
-          fi
-
       - name: Apply common fixes
         working-directory: gki/common
         run: |
