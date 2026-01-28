@@ -37,7 +37,7 @@ on:
         default: 'Snapdragon'
         options:
           - 'Snapdragon'
-          - 'MediaTek'
+          - 'Universal'
 
 permissions:
   contents: write
@@ -86,6 +86,13 @@ jobs:
           git fetch -j12 rama
           git checkout -b update-android12-5.10-staging rama/android12-5.10-staging
           # Setup KernelSU-KowSU
+          
+      - name: Apply Infinix GT 20 Pro Camera Fix
+        working-directory: gki/common
+        run: |
+          echo "📸 Applying Infinix GT 20 Pro Camera Fix..."
+          curl -L "https://github.com/ramabondanp/android_kernel_common-5.10/commit/4fe04b60009e.patch" -o infinix_cam.patch
+          patch -p1 < infinix_cam.patch || echo "Camera patch is embedded "
          
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
@@ -103,7 +110,7 @@ jobs:
           cp /tmp/qcom-cpufreq-hw.c "$TARGET"
           echo "✅ [Snapdragon] Qualcomm CPUFreq HW performance patch applied."
 
-      - name: Apply MediaTek Performance Tuning
+      - name: Apply Universal Performance Tuning
         if: github.event.inputs.performance_patch == 'MediaTek'
         working-directory: gki/common
         run: |
@@ -164,6 +171,14 @@ jobs:
           sed -i '/^static int drm_atomic_check_valid_clones/,/^}/d' drivers/gpu/drm/drm_atomic_helper.c
           sed -i '/ret = drm_atomic_check_valid_clones/,/return ret;/d' drivers/gpu/drm/drm_atomic_helper.c
           echo "✅ Perbaikan selesai"
+          
+     - name: Replace 500Hz
+        working-directory: gki/common
+        run: |
+          KCONFIG_HZ="kernel/Kconfig.hz"
+          sed -i 's/config HZ_300/config HZ_500/g' "$KCONFIG_HZ"
+          sed -i 's/bool "300 HZ"/bool "500 HZ"/g' "$KCONFIG_HZ"
+          sed -i 's/default 300 if HZ_300/default 500 if HZ_500/g' "$KCONFIG_HZ"
 
       - name: Remove check_defconfig
         run: |
@@ -189,12 +204,15 @@ jobs:
           CONFIG_KSU_HAS_MANUAL_HOOK=n
           EOF
           
-          if [ "$PERFORMANCE_PATCH" = "MediaTek" ]; then
+          if [ "$PERFORMANCE_PATCH" = "Universall" ]; then
             cat >> $DEFCONFIG <<EOF
-          # --- MediaTek Performance Tuning ---
+          # --- Universal Performance Tuning ---
           CONFIG_HZ=500
+          CONFIG_HZ_500=y
+          CONFIG_CPU_FREQ=y
+          CONFIG_HIGH_RES_TIMERS=y
           EOF
-            echo "✅ [MediaTek] Applied HZ=500 config."
+            echo "✅ [Universal] Applied HZ=500 config."
           fi
           cat >> $DEFCONFIG <<EOF
           # Add additional tmpfs config setting
@@ -242,7 +260,7 @@ jobs:
           if [ "$PERFORMANCE_PATCH" = "Snapdragon" ]; then
             SUFFIX="$SUFFIX-Qcom"
           else
-            SUFFIX="$SUFFIX-Mtk"
+            SUFFIX="$SUFFIX-Univ"
           fi
           
           echo "Setting custom kernel name: $SUFFIX"
@@ -353,7 +371,7 @@ jobs:
           📅 *Build Date*: ${{ env.KBUILD_BUILD_TIMESTAMP }}
           📛 *KernelSU*: ${{ env.KSU }}
           🔰 *Compiler*: ${{ env.COMPILER_STRING }}
-          🔗 *Hook Method*: Kprobes"
+          🔗 *Hook Method*: CONFIG_KSU_SYSCALL_HOOK"
           gh release create "$RELEASE_TAG" "${{ env.AK3_ZIP_NAME }}" \
             --title "$RELEASE_TAG" \
             --notes "$RELEASE_NOTES" \
