@@ -172,7 +172,7 @@ jobs:
           sed -i '/ret = drm_atomic_check_valid_clones/,/return ret;/d' drivers/gpu/drm/drm_atomic_helper.c
           echo "✅ Perbaikan selesai"
           
-     - name: Replace 500Hz
+      - name: Replace 500Hz
         working-directory: gki/common
         run: |
           KCONFIG_HZ="kernel/Kconfig.hz"
