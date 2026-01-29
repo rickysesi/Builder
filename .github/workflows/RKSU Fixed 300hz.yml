@@ -253,6 +253,11 @@ jobs:
           # Optimasi addition
           CONFIG_PSI=y
           CONFIG_PSI_DEFAULT_DISABLED=n
+          CONFIG_MEMCG=y
+          CONFIG_MEMCG_SWAP=y
+          CONFIG_ANDROID_LOW_MEMORY_KILLER=y
+          CONFIG_LRU_GEN=y
+          CONFIG_LRU_GEN_ENABLED=y
           CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
           CONFIG_SCHED_TUNE=y
           CONFIG_MQ_IOSCHED_KYBER=y
