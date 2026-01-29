@@ -136,7 +136,7 @@ jobs:
           done
           echo "✅ Existing KernelSU drivers removed"
           echo "➡️ Menambahkan KernelSU"
-          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-rksu-master
+          curl -LSs "https://raw.githubusercontent.com/Kingfinik98/KernelSU/refs/heads/main/kernel/setup.sh" | bash -s main
           echo "✅ KernelSU added"
           # 3. Apply Manager Support Patch manager MamboSU
           echo "🛠️ Applying MamboSU Manager Support Patch..."
