@@ -1,4 +1,4 @@
-name: BoltX RKSU FIXED
+name: BoltX RKSU FIXED 500hz
 
 on:
   workflow_dispatch:
