@@ -302,12 +302,34 @@ jobs:
           CONFIG_TCP_CONG_WESTWOOD=n
           CONFIG_TCP_CONG_HTCP=n
           CONFIG_DEFAULT_BBR=y
-          # Optimasi tambahan (Smooth & Responsiveness)
+          # Additional optimizations (Smooth & Responsiveness)
           CONFIG_PSI=y
           CONFIG_PSI_DEFAULT_DISABLED=n
           CONFIG_MEMCG=y
           CONFIG_MEMCG_SWAP=y
           CONFIG_ANDROID_LOW_MEMORY_KILLER=y
+          CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
+          CONFIG_CPU_FREQ_GOV_ONDEMAND=y
+          CONFIG_UCLAMP_TASK_GROUP=y
+          # config optimization
+          CONFIG_NO_HZ=y
+          CONFIG_BPF_SYSCALL=y
+          CONFIG_BPF_JIT=y
+          CONFIG_BPF_JIT_ALWAYS_ON=y
+          CONFIG_LRU_GEN=y
+          CONFIG_LRU_GEN_ENABLED=y
+          #config rcu
+          CONFIG_RCU_EXPERT=y
+          CONFIG_RCU_BOOST=y
+          CONFIG_RCU_NOCB_CPU=y
+          CONFIG_SCHED_TUNE=y
+          CONFIG_MQ_IOSCHED_KYBER=y
+          CONFIG_MQ_IOSCHED_BFQ=y
+          CONFIG_IOSCHED_BFQ=y
+          CONFIG_BFQ_GROUP_IOSCHED=y
+          CONFIG_ZRAM=y
+          CONFIG_ZRAM_WRITEBACK=y
+          
           CONFIG_LRU_GEN=y
           CONFIG_LRU_GEN_ENABLED=y
           CONFIG_CPU_FREQ_DEFAULT_GOV_SCHEDUTIL=y
@@ -428,7 +450,7 @@ jobs:
           echo "RELEASE=$RELEASE" >> $GITHUB_ENV
           echo "AK3_ZIP_NAME=$AK3_ZIP_NAME" >> $GITHUB_ENV
           echo "KBUILD_BUILD_TIMESTAMP=$KBUILD_BUILD_TIMESTAMP" >> $GITHUB_ENV
-          echo "KSU=Wild_KSU" >> $GITHUB_ENV
+          echo "KSU=Wild_KSU & KernelSU Next Support" >> $GITHUB_ENV
           echo "SUSFS_VERSION=$(curl -s https://gitlab.com/simonpunk/susfs4ksu/raw/gki-android12-5.10/kernel_patches/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g')" >> $GITHUB_ENV
           echo "COMPILER_STRING=$CLANG_VERSION_STRING" >> $GITHUB_ENV
 
