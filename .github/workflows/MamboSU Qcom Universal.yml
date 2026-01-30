@@ -291,7 +291,7 @@ jobs:
           SUFFIX=""
           if [ -n "$KERNEL_NAME_INPUT" ]; then
             SUFFIX="-$KERNEL_NAME_INPUT"
-          fi    l
+          fi
 
           # Hapus logika SuSFS suffix
           
