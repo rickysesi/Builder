@@ -387,8 +387,8 @@ jobs:
           echo "⚙️ Applying Common Performance & Network Configs..."
           
           # --- 300Hz & Essential Global Settings (Applied to all: Snapdragon, MediaTek, Universal) ---
-          echo "CONFIG_HZ=300" >> $DEFCONFIG
-          echo "CONFIG_HZ_300=y" >> $DEFCONFIG
+          echo "CONFIG_HZ=750" >> $DEFCONFIG
+          echo "CONFIG_HZ_750=y" >> $DEFCONFIG
           echo "CONFIG_CPU_FREQ=y" >> $DEFCONFIG
           echo "CONFIG_HIGH_RES_TIMERS=y" >> $DEFCONFIG
 
