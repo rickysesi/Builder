@@ -76,9 +76,9 @@ jobs:
       - name: Update kernel source for GKI 5.10
         run: |
           cd gki/common
-          git remote add rama https://github.com/ramabondanp/android_kernel_common-5.10.git
-          git fetch -j12 rama
-          git checkout -b update-android12-5.10-staging rama/android12-5.10-staging
+          git remote add tree https://github.com/TegarXLu/onyx_clo
+          git fetch -j12 tree
+          git checkout -b 6.6.77-capybara-clo-2.3 tree/6.6.77-capybara-clo-2.3
 
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
@@ -358,7 +358,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           echo "🚀 Creating GitHub Release..."
-          GKI_RELEASES_REPO="https://github.com/Kingfinik98/Kernel-Release"
+          GKI_RELEASES_REPO="https://github.com/TegarXLu/GKI_kernel_Build"
           REPO_PATH=$(echo "$GKI_RELEASES_REPO" | sed 's|https://github.com/||')
           RELEASE_TAG="${{ env.KERNEL_NAME }}-${{ env.LINUX_VERSION }}-${{ env.RELEASE }}"
           RELEASE_NOTES="🐧 *Linux Version*: ${{ env.LINUX_VERSION }}
