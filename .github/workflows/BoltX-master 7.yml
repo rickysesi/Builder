@@ -291,7 +291,7 @@ jobs:
 
           elif [ "$ROOT_VARIANT" == "SukiSU" ]; then
             rm -rf drivers/staging/kernelsu
-            curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s tmp-builtin
+            curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/refs/heads/builtin/kernel/setup.sh" | bash -s builtin
             git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
             rm -rf sus/.git
             susfs=sus/kernel_patches
