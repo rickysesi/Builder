@@ -553,7 +553,8 @@ jobs:
           echo "CLANG_VER=$CLANG_VER" >> $GITHUB_ENV
           mkdir -p prebuilts-master/clang/host/linux-x86/$CLANG_VER
           cd prebuilts-master/clang/host/linux-x86
-          curl -L "${CLANG_URL}" | tar -xz -C $CLANG_VER
+          # Menambahkan retry logic untuk stabilitas download file besar
+          curl -L --retry 3 --retry-all-errors "${CLANG_URL}" | tar -xz -C $CLANG_VER
           rm -rf clang-r563880b
           ln -sf $CLANG_VER clang-r563880b
 
