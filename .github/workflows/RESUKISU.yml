@@ -76,7 +76,7 @@ jobs:
       - name: "📥 CLONE SOURCE WITH VERIFICATION"
         run: |
           cd gki/common
-          git clone https://github.com/TegarXLu/onyx_clo.git --depth=1 -b 6.6.77-capybara-clo-2.3 gki/common
+          git clone https://github.com/TegarXLu/onyx_clo.git --depth=1 -b susfs-6.6.77 gki/common
           cd gki/common
           git submodule update --init --recursive --depth=1
 
