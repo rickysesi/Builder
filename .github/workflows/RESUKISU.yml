@@ -303,18 +303,24 @@ jobs:
           git add .
           git commit -m "Final clean tree before build" || true
 
-      - name: Debug tree
-        run: |
-          pwd
-          ls -la
-          ls -la build || true
-          ls -la build/build.sh || true
-
       - name: Build GKI Kernel
         run: |
-          LTO=thin \
-          BUILD_CONFIG=common/build.config.gki.aarch64 \
-          build/build.sh
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export LLVM=1
+          export LLVM_IAS=1
+          export CC="clang"
+          export LD="ld.lld"
+          export AR="llvm-ar"
+          export NM="llvm-nm"
+          export STRIP="llvm-strip"
+          export OBJCOPY="llvm-objcopy"
+          export OBJDUMP="llvm-objdump"
+          export CLANG_TRIPLE="aarch64-linux-gnu-"
+          export CROSS_COMPILE="aarch64-linux-gnu-"
+          export CROSS_COMPILE_ARM32="arm-linux-gnueabi-"
+          export LTO=full \
+          BUILD_CONFIG=common/build.config.gki.aarch64
 
       - name: Setup Environment Variables for Packaging
         id: vars
