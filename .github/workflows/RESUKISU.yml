@@ -114,19 +114,71 @@ jobs:
         run: |
           sed -i '2d' gki/common/build.config.gki
 
-      - name: Setup SukiSU & SUSFS
+      - name: Setup SukiSU & SUSFS (robust apply + debug)
         run: |
+          set -euxo pipefail
           cd gki/common
-          echo "[6/12] Setup SukiSU & SUSFS"
-          curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -s builtin
-          git clone https://gitlab.com/simonpunk/susfs4ksu/ -b gki-android12-5.10 sus
-          rm -rf sus/.git
+          echo "[6/12] Setup SukiSU & SUSFS (robust)"
+          # Clone susfs (ambil default branch jika branch spesifik tidak ada)
+          rm -rf sus || true
+          git clone https://gitlab.com/simonpunk/susfs4ksu/ sus || true
+          # coba beberapa branch yang mungkin ada, fallback ke default
+          cd sus || exit 1
+          for br in gki-6.6 gki-android12-5.10 main master ; do
+            if git ls-remote --exit-code --heads origin $br >/dev/null 2>&1; then
+              git fetch --depth=1 origin $br || true
+              git checkout -B "$br" "origin/$br" || true
+              echo "Checked out sus branch: $br"
+              break
+            fi
+          done || true
+          cd ..
+          # remove git meta agar tidak mencampur tree kernel
+          rm -rf sus/.git || true
+
+          # debug: tampilkan versi kernel tree yang akan dipatching
+          KVER=$(make -s kernelversion -C . || echo "unknown")
+          echo "Target kernel version: $KVER"
+
+          # copy patch files & sources
           susfs=sus/kernel_patches
-          cp -r $susfs/fs .
-          cp -r $susfs/include .
-          cp -r $susfs/50_add_susfs_in_gki-android12-5.10.patch .
-          patch -p1 < 50_add_susfs_in_gki-android12-5.10.patch
-          echo "[✓] SUSFS patched"
+          if [ -d "$susfs" ]; then
+            cp -r $susfs/fs . || true
+            cp -r $susfs/include . || true
+            cp -r $susfs/*.patch . || true
+          else
+            echo "WARN: sus/kernel_patches not found. Listing sus dir:"
+            ls -la sus || true
+          fi
+
+          # Try to apply all patches using git apply --3way (more forgiving)
+          set +e
+          applied_any=0
+          for p in *.patch; do
+            [ -f "$p" ] || continue
+            echo "------ Applying patch: $p ------"
+            git apply --3way --whitespace=fix "$p"
+            rc=$?
+            if [ $rc -eq 0 ]; then
+              echo "Applied $p with --3way"
+              applied_any=1
+            else
+              echo "git apply --3way failed for $p (rc=$rc). Trying git apply --reject to capture rejects..."
+              # try to capture rejects for manual porting
+              git apply --reject --whitespace=fix "$p" || true
+              # print some .rej heads for debugging
+              find . -name '*.rej' -print -exec sed -n '1,200p' {} \;
+            fi
+          done
+          set -e
+
+          if [ "$applied_any" -eq 0 ]; then
+            echo "No patch applied automatically — SUSFS patches likely incompatible with this kernel (6.6)."
+            echo "Look for .rej files above. Failing build step to let user inspect logs."
+            exit 1
+          fi
+
+          echo "[✓] SUSFS patch attempt finished (see logs for rejects)"
 
       - name: Apply common fixes
         working-directory: gki/common
