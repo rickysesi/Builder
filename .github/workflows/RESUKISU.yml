@@ -303,12 +303,6 @@ jobs:
           git add .
           git commit -m "Final clean tree before build" || true
 
-      - name: Init repo (GKI 6.6)
-        run: |
-          repo init -u https://android.googlesource.com/kernel/manifest \
-            -b common-android15-6.6
-          repo sync -j$(nproc) --no-clone-bundle --no-tags
-
       - name: Debug tree
         run: |
           pwd
