@@ -1,4 +1,4 @@
-name: BoltX Kernel RESUKISU
+name: BoltX Kernel RESUKISU Rodin
 
 on:
   workflow_dispatch:
