@@ -70,15 +70,15 @@ jobs:
       - name: Init & Sync GKI
         run: |
           mkdir gki && cd gki
-          repo init -u https://android.googlesource.com/kernel/manifest -b common-android12-5.10 --depth=1
+          repo init -u https://android.googlesource.com/kernel/manifest -b common-android15-6.6 --depth=1
           repo sync -c --no-tags --no-clone-bundle --optimized-fetch -j$(nproc --all)
 
-      - name: Update kernel source for GKI 5.10
-        run: |
-          cd gki/common
-          git remote add kingfinik98 https://github.com/TegarXLu/onyx_clo
-          git fetch -j12 TegarXLu
-          git checkout -b 6.6.77-capybara-clo-2.3 TegarXLu/6.6.77-capybara-clo-2.3
+       - name: "📥 CLONE SOURCE WITH VERIFICATION"
+         run: |
+           cd gki/common
+           git clone https://github.com/TegarXLu/onyx_clo.git --depth=1 -b susfs-6.6.77 gki/common
+           cd gki/common
+           git submodule update --init --recursive --depth=1
 
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
