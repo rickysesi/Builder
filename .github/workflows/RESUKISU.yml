@@ -303,10 +303,24 @@ jobs:
           git add .
           git commit -m "Final clean tree before build" || true
 
-      - name: Compile
-        working-directory: gki
+      - name: Init repo (GKI 6.6)
         run: |
-          LTO=thin BUILD_CONFIG=common/build.config.gki.aarch64 build/build.sh
+          repo init -u https://android.googlesource.com/kernel/manifest \
+            -b common-android15-6.6
+          repo sync -j$(nproc) --no-clone-bundle --no-tags
+
+      - name: Debug tree
+        run: |
+          pwd
+          ls -la
+          ls -la build || true
+          ls -la build/build.sh || true
+
+      - name: Build GKI Kernel
+        run: |
+          LTO=thin \
+          BUILD_CONFIG=common/build.config.gki.aarch64 \
+          build/build.sh
 
       - name: Setup Environment Variables for Packaging
         id: vars
