@@ -136,7 +136,7 @@ jobs:
           HOOK_METHOD="${{ github.event.inputs.hook_method }}"
           if [ "$HOOK_METHOD" = "susfs" ]; then
             echo "➡️ Cloning susfs4ksu (versi baru)"
-            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android12-5.10 sus
+            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android14-6.1 sus
             echo "✅ SUSFS berhasil diclone"
             echo "🩹 Patching susfs4ksu"
             susfs=sus/kernel_patches
