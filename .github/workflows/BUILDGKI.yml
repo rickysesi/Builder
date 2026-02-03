@@ -83,9 +83,9 @@ jobs:
       - name: Update kernel source for GKI 5.10
         run: |
           cd gki/common
-          git remote add kingfinik98 https://github.com/rickysesi/android_kernel_xiaomi_sm8635
+          git remote add rickysesi https://github.com/rickysesi/android_kernel_xiaomi_sm8635
           git fetch -j12 rickysesi
-          git checkout -b update-master rickysesi/Rd
+          git checkout -b update-Rd rickysesi/Rd
 
       - name: Apply Snapdragon Performance Patch
         if: github.event.inputs.performance_patch == 'Snapdragon'
