@@ -113,44 +113,7 @@ jobs:
       - name: Tweak build config
         run: |
           sed -i '2d' gki/common/build.config.gki
-
-      - name: Setup KernelSU-Next & Hook Method
-        working-directory: gki/common
-        run: |
-          echo "🧩 Setup KernelSU-Next dan Hook Method"
-          for KSU_PATH in drivers/staging/kernelsu drivers/kernelsu KernelSU; do
-            if [ -d $KSU_PATH ]; then
-              echo "KernelSU driver found in $KSU_PATH, Removing..."
-              KSU_DIR=$(dirname "$KSU_PATH")
-              [ -f "$KSU_DIR/Kconfig" ] && sed -i '/kernelsu/d' $KSU_DIR/Kconfig
-              [ -f "$KSU_DIR/Makefile" ] && sed -i '/kernelsu/d' $KSU_DIR/Makefile
-              rm -rf $KSU_PATH
-            fi
-          done
-          echo "✅ Existing KernelSU drivers removed"
-          echo "➡️ Menambahkan KernelSU-Next"
-          curl -LSs "https://raw.githubusercontent.com/pershoot/KernelSU-Next/refs/heads/dev-susfs/kernel/setup.sh" | bash -s dev-susfs
-          echo "✅ KernelSU-Next added"
-          sed -i 's/$(error KSU requires Kprobes; enable it (defconfig))/# $(error KSU requires Kprobes; enable it (defconfig))/' drivers/kernelsu/Kbuild
-          echo "✅ Kbuild patched."
-          HOOK_METHOD="${{ github.event.inputs.hook_method }}"
-          if [ "$HOOK_METHOD" = "susfs" ]; then
-            echo "➡️ Cloning susfs4ksu (versi baru)"
-            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-android14-6.1 sus
-            echo "✅ SUSFS berhasil diclone"
-            echo "🩹 Patching susfs4ksu"
-            susfs=sus/kernel_patches
-            cp -r $susfs/fs .
-            cp -r $susfs/include .
-            cp -r $susfs/50_add_susfs_in_gki-android14-6.1.patch .
-            patch -p1 < 50_add_susfs_in_gki-android14-6.1.patch
-            sed -i '1i#include <linux/stat.h>' include/linux/susfs.h
-            echo "✅ SUSFS patched"
-          else
-            echo "➡️ Menggunakan metode Kprobes Hook"
-            echo "✅ Kprobes setup selesai"
-          fi
-
+      
       - name: Apply common fixes
         working-directory: gki/common
         run: |
